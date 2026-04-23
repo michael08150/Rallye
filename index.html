@@ -48,25 +48,29 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 .autostart-badge{margin:0 18px 4px;padding:7px 14px;border-radius:5px;border:1px solid var(--border);background:var(--surface2);font-size:12px;letter-spacing:1px;color:var(--muted);text-align:center;display:none;}
 .autostart-badge.active{border-color:var(--blue);color:var(--blue);background:#001a2a;}
 
-.chrono-section{padding:16px 20px 10px;text-align:center;flex-shrink:0;}
+.chrono-section{padding:12px 20px 8px;text-align:center;flex-shrink:0;}
 .chrono-label{font-size:11px;letter-spacing:4px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;}
-.chrono-display{font-family:'Share Tech Mono',monospace;font-size:clamp(50px,14vw,76px);line-height:1;color:var(--text);transition:color 0.2s;letter-spacing:2px;}
+.chrono-display{font-family:'Share Tech Mono',monospace;font-size:clamp(64px,18vw,96px);line-height:1;color:var(--text);transition:color 0.2s;letter-spacing:2px;}
 .chrono-display.running{color:var(--green);}
 .chrono-display.paused{color:var(--orange);}
-.chrono-ms{font-family:'Share Tech Mono',monospace;font-size:26px;color:var(--muted);margin-top:3px;}
-.status-bar{display:flex;justify-content:center;gap:6px;margin-top:8px;align-items:center;}
+.chrono-ms{font-family:'Share Tech Mono',monospace;font-size:30px;color:var(--muted);margin-top:2px;}
+.status-bar{display:flex;justify-content:center;gap:6px;margin-top:6px;align-items:center;}
 .status-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);}
 .status-dot.running{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1s ease-in-out infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
 .status-text{font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
 
-.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:8px 18px 10px;flex-shrink:0;}
-.btn-start{background:var(--green);color:#000;grid-column:1/-1;font-size:17px;padding:16px;}
+/* ── CONTROLS CHRONO ── */
+.controls{display:flex;flex-direction:column;gap:10px;padding:8px 18px 10px;flex-shrink:0;}
+.btn-start{background:var(--green);color:#000;font-size:20px;padding:20px;width:100%;}
 .btn-start:disabled{background:#1a3d26;color:#2a5a3a;cursor:not-allowed;}
-.btn-stop{background:var(--red);color:#fff;grid-column:1/-1;font-size:22px;padding:22px;display:none;letter-spacing:3px;}
-.btn-lap{background:var(--surface2);color:var(--orange);border:2px solid var(--orange);font-size:20px;padding:20px;letter-spacing:2px;}
-.btn-reset{background:var(--surface2);color:var(--muted);border:1px solid var(--border);font-size:13px;padding:12px;}
-.btn-save{background:var(--orange);color:#000;grid-column:1/-1;font-size:13px;padding:12px;}
+/* rangée stop + split : toujours présente, stop caché au départ */
+.controls-race{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.btn-stop{background:var(--red);color:#fff;font-size:22px;padding:28px 10px;letter-spacing:2px;width:100%;}
+.btn-lap{background:var(--surface2);color:var(--orange);border:2px solid var(--orange);font-size:22px;padding:28px 10px;letter-spacing:2px;width:100%;}
+.controls-bottom{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.btn-reset{background:var(--surface2);color:var(--muted);border:1px solid var(--border);font-size:13px;padding:13px;width:100%;}
+.btn-save{background:var(--orange);color:#000;font-size:13px;padding:13px;width:100%;}
 
 .splits-section{padding:7px 18px;border-top:1px solid var(--border);background:var(--surface2);flex-shrink:0;}
 .splits-label{font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;}
@@ -216,6 +220,21 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 .delta-empty-text{font-size:13px;letter-spacing:1px;line-height:1.6;}
 
 /* TOAST */
+/* ── TRIPMÈTRE + VITESSE ── */
+.rb-instruments{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0;background:var(--bg);border-bottom:2px solid var(--border);flex-shrink:0;}
+.rb-inst-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;border-right:1px solid var(--border);position:relative;}
+.rb-inst-cell:last-child{border-right:none;}
+.rb-inst-label{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:3px;}
+.rb-inst-val{font-family:'Share Tech Mono',monospace;font-size:22px;line-height:1;color:var(--text);font-weight:700;}
+.rb-inst-unit{font-size:9px;color:var(--muted);margin-top:2px;letter-spacing:1px;}
+.rb-inst-cell.speed .rb-inst-val{font-size:28px;color:var(--blue);}
+.rb-inst-cell.speed.fast .rb-inst-val{color:var(--orange);}
+.rb-inst-cell.speed.veryfast .rb-inst-val{color:var(--red);}
+.rb-inst-cell.partial .rb-inst-val{color:var(--green);}
+.rb-inst-cell.total .rb-inst-val{color:var(--yellow);}
+.rb-reset-btn{position:absolute;top:3px;right:3px;background:none;border:none;color:var(--border);font-size:11px;cursor:pointer;padding:1px 3px;border-radius:3px;line-height:1;}
+.rb-reset-btn:hover{color:var(--red);}
+
 /* ===================== ROAD BOOK ===================== */
 .rb-toolbar{display:flex;gap:8px;padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;align-items:center;}
 .rb-mode-btn{padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all 0.2s;}
@@ -427,11 +446,20 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
   </div>
 
   <div class="controls">
+    <!-- DÉPART (avant la course) -->
     <button class="btn btn-start" id="btnStart" onclick="startChrono()">▶ DÉPART</button>
-    <button class="btn btn-stop" id="btnStop" onclick="stopChrono()">⏸ PAUSE</button>
-    <button class="btn btn-lap" id="btnLap" onclick="saveSplit()" disabled>⚡ SPLIT</button>
-    <button class="btn btn-reset" onclick="resetChrono()">↺ RESET</button>
-    <button class="btn btn-save" id="btnSave" onclick="saveTime()" disabled>✚ ENREGISTRER CE TEMPS</button>
+
+    <!-- PAUSE + SPLIT côte à côte (pendant la course) -->
+    <div class="controls-race" id="controlsRace" style="display:none">
+      <button class="btn btn-stop" id="btnStop" onclick="stopChrono()">⏸ PAUSE</button>
+      <button class="btn btn-lap" id="btnLap" onclick="saveSplit()" disabled>⚡ SPLIT</button>
+    </div>
+
+    <!-- RESET + ENREGISTRER -->
+    <div class="controls-bottom">
+      <button class="btn btn-reset" onclick="resetChrono()">↺ RESET</button>
+      <button class="btn btn-save" id="btnSave" onclick="saveTime()" disabled>✚ ENREGISTRER</button>
+    </div>
   </div>
 
   <!-- DELTA INLINE -->
@@ -626,6 +654,41 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
     </div>
   </div>
 
+  <!-- INSTRUMENTS : VITESSE + TRIPMÈTRE -->
+  <div class="rb-instruments">
+    <!-- Vitesse -->
+    <div class="rb-inst-cell speed" id="rbCellSpeed">
+      <div class="rb-inst-label">Vitesse</div>
+      <div class="rb-inst-val" id="rbSpeed">0</div>
+      <div class="rb-inst-unit">km/h</div>
+    </div>
+    <!-- Trip partiel 1 -->
+    <div class="rb-inst-cell partial">
+      <div class="rb-inst-label">Trip 1</div>
+      <div class="rb-inst-val" id="rbTrip1">0.00</div>
+      <div class="rb-inst-unit">km</div>
+    </div>
+    <!-- Trip partiel 2 -->
+    <div class="rb-inst-cell partial">
+      <div class="rb-inst-label">Trip 2</div>
+      <div class="rb-inst-val" id="rbTrip2">0.00</div>
+      <div class="rb-inst-unit">km</div>
+    </div>
+    <!-- Total -->
+    <div class="rb-inst-cell total">
+      <div class="rb-inst-label">Total</div>
+      <div class="rb-inst-val" id="rbTripTotal">0.00</div>
+      <div class="rb-inst-unit">km</div>
+    </div>
+  </div>
+  <!-- BOUTONS RAZ -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;">
+    <div style="border-right:1px solid var(--border);"></div>
+    <button onclick="rbResetTrip(1)" style="padding:5px 0;background:none;border:none;border-right:1px solid var(--border);color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;text-transform:uppercase;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">↺ RAZ</button>
+    <button onclick="rbResetTrip(2)" style="padding:5px 0;background:none;border:none;border-right:1px solid var(--border);color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;text-transform:uppercase;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">↺ RAZ</button>
+    <button onclick="rbResetTrip(0)" style="padding:5px 0;background:none;border:none;color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;text-transform:uppercase;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">↺ TOUT</button>
+  </div>
+
   <!-- CARTE -->
   <div id="rb-map"></div>
 
@@ -633,14 +696,14 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
   <div class="rb-bottom" id="rbBottomReco">
     <button class="rb-btn rb-btn-rec" id="rbBtnRecord" onclick="rbToggleRecord()">⏺ ENREGISTRER</button>
     <button class="rb-btn rb-btn-note" onclick="rbOpenNote()">📍 NOTE</button>
-    <button class="rb-btn rb-btn-center" onclick="rbCenterGps()">◎ GPS</button>
-    <button class="rb-btn rb-btn-save" onclick="rbSaveRoute()">💾 SAUVER</button>
+    <button class="rb-btn rb-btn-center" id="rbBtnCenter" onclick="rbCenterGps()">◎ GPS</button>
+    <button class="rb-btn rb-btn-save" onclick="rbSaveRoute()">💾</button>
     <button class="rb-btn rb-btn-clear" onclick="rbClearTrack()">🗑</button>
   </div>
 
   <div class="rb-bottom" id="rbBottomRallye" style="display:none">
     <button class="rb-btn rb-btn-load" onclick="rbShowRoutes()">📂 CHARGER TRACÉ</button>
-    <button class="rb-btn rb-btn-center" onclick="rbCenterGps()">◎ GPS</button>
+    <button class="rb-btn rb-btn-center" id="rbBtnCenterRallye" onclick="rbCenterGps()">◎ GPS</button>
   </div>
 
   <!-- LISTE DES ROUTES SAUVEGARDÉES -->
@@ -701,20 +764,21 @@ function rbInit(){
   if(rbMap) return;
 
   rbMap=L.map('rb-map',{
-    center:[45.5,6.0], zoom:13,
+    center:[45.5,6.0], zoom:14,
     zoomControl:true, attributionControl:true
   });
 
-  // CartoDB Dark Matter — fonctionne sans clé, pas de 403
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
-    attribution:'© <a href="https://carto.com">CARTO</a>',
+  // Tuiles claires OpenStreetMap via CartoDB Voyager (lisible, coloré)
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+    attribution:'© <a href="https://carto.com">CARTO</a> © <a href="https://www.openstreetmap.org">OSM</a>',
     subdomains:'abcd', maxZoom:19
   }).addTo(rbMap);
 
-  rbPolyline=L.polyline([],{color:'#ff6b00',weight:4,opacity:0.9}).addTo(rbMap);
+  rbPolyline=L.polyline([],{color:'#e8001d',weight:5,opacity:0.9}).addTo(rbMap);
 
   rbLoadRoutes();
   rbStartGps();
+  rbInitMapEvents();
 }
 
 // ─── GPS ───
@@ -759,22 +823,50 @@ function rbHideGpsError(){
   if(el) el.style.display='none';
 }
 
+var rbFollowGps=true;  // suivi auto de la position
+var rbTrip=[0,0,0];    // [total, trip1, trip2] en km
+var rbLastPosForTrip=null; // dernière position pour calcul distance
+
 function rbOnGps(pos){
   var lat=pos.coords.latitude, lng=pos.coords.longitude;
+  var spd=pos.coords.speed; // m/s (peut être null)
   var acc=Math.round(pos.coords.accuracy);
   rbLastPos={lat:lat,lng:lng,acc:acc,ts:Date.now()};
   rbSetGpsStatus('📡 ±'+acc+'m');
   rbHideGpsError();
 
-  // Mettre à jour le marqueur position
+  // ── VITESSE ──
+  var kmh=0;
+  if(spd!==null && spd!==undefined) kmh=Math.round(spd*3.6);
+  var speedEl=document.getElementById('rbSpeed');
+  var cellEl=document.getElementById('rbCellSpeed');
+  if(speedEl){ speedEl.textContent=kmh; }
+  if(cellEl){
+    cellEl.className='rb-inst-cell speed'+(kmh>120?' veryfast':kmh>80?' fast':'');
+  }
+
+  // ── TRIPMÈTRE ──
+  if(rbLastPosForTrip){
+    var d=rbHaversine(rbLastPosForTrip.lat,rbLastPosForTrip.lng,lat,lng);
+    if(d<0.5){ // ignorer sauts GPS > 500m
+      rbTrip[0]+=d; rbTrip[1]+=d; rbTrip[2]+=d;
+      rbUpdateTrip();
+    }
+  }
+  rbLastPosForTrip={lat:lat,lng:lng};
+
+  // Mettre à jour le marqueur position (point GPS bleu pulsant)
   if(!rbGpsMarker){
-    rbGpsMarker=L.circleMarker([lat,lng],{
-      radius:10, color:'#00aaff', fillColor:'#00aaff',
-      fillOpacity:0.9, weight:3
-    }).addTo(rbMap);
-    rbMap.setView([lat,lng],15);
+    var gpsIcon=L.divIcon({
+      className:'',
+      html:'<div style="width:20px;height:20px;border-radius:50%;background:#00aaff;border:3px solid #fff;box-shadow:0 0 0 3px rgba(0,170,255,0.3),0 2px 8px rgba(0,0,0,0.4)"></div>',
+      iconSize:[20,20], iconAnchor:[10,10]
+    });
+    rbGpsMarker=L.marker([lat,lng],{icon:gpsIcon,zIndexOffset:1000}).addTo(rbMap);
+    rbMap.setView([lat,lng],16);
   } else {
     rbGpsMarker.setLatLng([lat,lng]);
+    if(rbFollowGps) rbMap.setView([lat,lng], rbMap.getZoom(), {animate:true, duration:0.5});
   }
 
   // En mode enregistrement → ajouter le point au tracé
@@ -788,9 +880,47 @@ function rbOnGps(pos){
   if(rbMode==='rallye') rbCheckProximite(lat,lng);
 }
 
+function rbHaversine(lat1,lng1,lat2,lng2){
+  var R=6371, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+
+        Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+        Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function rbUpdateTrip(){
+  var el1=document.getElementById('rbTrip1');
+  var el2=document.getElementById('rbTrip2');
+  var elT=document.getElementById('rbTripTotal');
+  if(el1) el1.textContent=rbTrip[1].toFixed(2);
+  if(el2) el2.textContent=rbTrip[2].toFixed(2);
+  if(elT) elT.textContent=rbTrip[0].toFixed(2);
+}
+
+function rbResetTrip(which){
+  if(which===0){ rbTrip=[0,0,0]; rbLastPosForTrip=null; } // tout
+  else if(which===1){ rbTrip[1]=0; }
+  else if(which===2){ rbTrip[2]=0; }
+  rbUpdateTrip();
+  showToast(which===0?'↺ Tous les compteurs remis à zéro':'↺ Trip '+which+' remis à zéro','tyellow');
+}
+
 function rbCenterGps(){
-  if(rbLastPos) rbMap.setView([rbLastPos.lat,rbLastPos.lng],16);
-  else showToast('GPS non disponible','tred');
+  rbFollowGps=!rbFollowGps;
+  var btn=document.getElementById('rbBtnCenter');
+  if(rbFollowGps){
+    btn.textContent='◎ SUIVI ON'; btn.style.color='var(--green)'; btn.style.borderColor='var(--green)';
+    if(rbLastPos) rbMap.setView([rbLastPos.lat,rbLastPos.lng],16,{animate:true});
+    showToast('📡 Suivi GPS activé','tgreen');
+  } else {
+    btn.textContent='◎ GPS'; btn.style.color='var(--blue)'; btn.style.borderColor='var(--blue)';
+    showToast('Suivi GPS désactivé — carte libre','tyellow');
+  }
+}
+
+// Désactiver le suivi si l'utilisateur bouge la carte manuellement
+function rbInitMapEvents(){
+  rbMap.on('dragstart', function(){ rbFollowGps=false; var btn=document.getElementById('rbBtnCenter'); if(btn){ btn.textContent='◎ GPS'; btn.style.color='var(--blue)'; btn.style.borderColor='var(--blue)'; } });
 }
 
 function rbSetGpsStatus(txt){ document.getElementById('rbGpsStatus').textContent=txt; }
@@ -883,9 +1013,12 @@ function rbAddNoteMarker(lat,lng,txt){
 function rbSaveRoute(){
   if(rbTrackPoints.length<2){ showToast('Tracé trop court !','tred'); return; }
   var now=new Date();
-  var name='ES '+now.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+' '+now.getHours()+'h'+pad(now.getMinutes());
+  var defaultName='ES '+now.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+' '+now.getHours()+'h'+pad(now.getMinutes());
+  var name=prompt('Nom du tracé :', defaultName);
+  if(name===null) return; // annulé
+  if(!name.trim()) name=defaultName;
   var route={
-    id:Date.now(), name:name,
+    id:Date.now(), name:name.trim(),
     points:rbTrackPoints.slice(),
     notes:rbNotePoints.slice(),
     dist:rbCalcDist(rbTrackPoints),
@@ -893,7 +1026,7 @@ function rbSaveRoute(){
   };
   rbRoutes.unshift(route);
   localStorage.setItem('rb_routes',JSON.stringify(rbRoutes));
-  showToast('💾 Tracé sauvegardé ('+rbTrackPoints.length+' pts)','tgreen');
+  showToast('💾 "'+route.name+'" sauvegardé','tgreen');
 }
 
 function rbCalcDist(pts){
@@ -1083,7 +1216,7 @@ function startChrono(){
   timerRef=setInterval(tickChrono,50);
   isRunning=true;
   document.getElementById('btnStart').style.display='none';
-  document.getElementById('btnStop').style.display='block';
+  document.getElementById('controlsRace').style.display='grid';
   document.getElementById('btnLap').disabled=false;
   document.getElementById('btnSave').disabled=false;
   document.getElementById('chronoDisplay').className='chrono-display running';
@@ -1095,7 +1228,7 @@ function startChrono(){
 function stopChrono(){
   if(!isRunning) return;
   clearInterval(timerRef); elapsed=Date.now()-startTime; isRunning=false;
-  document.getElementById('btnStop').style.display='none';
+  document.getElementById('controlsRace').style.display='none';
   document.getElementById('btnStart').style.display='block';
   document.getElementById('btnStart').textContent='▶ REPRENDRE';
   document.getElementById('btnLap').disabled=true;
@@ -1108,7 +1241,7 @@ function resetChrono(){
   clearInterval(timerRef); elapsed=0; splits=[]; isRunning=false;
   document.getElementById('chronoDisplay').textContent='00:00';
   document.getElementById('chronoMs').textContent='.000';
-  document.getElementById('btnStop').style.display='none';
+  document.getElementById('controlsRace').style.display='none';
   document.getElementById('btnStart').style.display='block';
   document.getElementById('btnStart').textContent='▶ DÉPART';
   document.getElementById('btnLap').disabled=true;
@@ -1546,9 +1679,18 @@ var nbActiveRbId=null;   // road book chargé en course
 var nbGpsWatchId=null;
 
 // État du constructeur
-var nbState={dist:null,dir:null,rap:null,qual:null,topo:null,flag:null,vit:null,free:''};
+// dist, dir, rap, freinage = choix unique
+// quals, topos, flags, trans = tableaux multi-choix
+var nbState={
+  dist:null, dir:null, rap:null, freinage:null,
+  quals:[], topos:[], flags:[], trans:[],
+  free:''
+};
 
-// ── INIT ──
+// Catégories à choix unique (radio)
+var NB_SINGLE=['dist','dir','rap','freinage'];
+// Catégories à choix multiples (checkbox)
+var NB_MULTI=['quals','topos','flags','trans'];
 function nbInit(){
   nbLoadRoadBooks();
   nbRenderList();
