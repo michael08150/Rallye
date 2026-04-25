@@ -540,6 +540,13 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
   <canvas id="gestureCanvas" width="64" height="64" style="display:none;"></canvas>
   <video id="gestureVideo" autoplay playsinline muted style="display:none;"></video>
 
+  <!-- Preview vidéo enregistrement (coin haut droit) -->
+  <div id="videoPreviewWrap" style="display:none;position:fixed;top:56px;right:8px;z-index:500;border:2px solid var(--red);border-radius:6px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.6);">
+    <video id="videoPreview" autoplay playsinline muted style="width:90px;height:120px;object-fit:cover;display:block;transform:scaleX(-1);"></video>
+    <div id="videoRecDot" style="position:absolute;top:4px;left:4px;width:8px;height:8px;border-radius:50%;background:var(--red);animation:pulse 1s ease-in-out infinite;"></div>
+    <div id="videoRecTimer" style="position:absolute;bottom:2px;left:0;right:0;text-align:center;font-family:Share Tech Mono,monospace;font-size:11px;color:#fff;text-shadow:0 1px 3px #000;"></div>
+  </div>
+
   <div class="splits-section" id="splitsSection" style="display:none">
     <div class="splits-label">Splits intermédiaires</div>
     <div class="splits-row" id="splitsRow"></div>
@@ -627,7 +634,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 
     </div>
 
-    <div style="margin-top:10px;">
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
       <div class="toggle-row">
         <div>
           <div class="toggle-label">Chrono auto à 0:00</div>
@@ -635,6 +642,17 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
         </div>
         <label class="toggle-switch">
           <input type="checkbox" id="autoStartToggle" onchange="updateAutoIndicator()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">📹 Vidéo selfie auto</div>
+          <div class="toggle-hint">Démarre 30s avant le départ · S'arrête 30s après la fin</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="videoAutoToggle">
           <span class="toggle-slider"></span>
         </label>
       </div>
@@ -676,6 +694,11 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 
   <div class="cd-auto-indicator" id="cdAutoIndicator">
     🔄 Chrono spéciale se lancera automatiquement à 0:00
+  </div>
+
+  <!-- Indicateur vidéo -->
+  <div id="cdVideoIndicator" style="display:none;margin:6px 18px 0;padding:7px 14px;border-radius:5px;border:1px solid var(--red);background:#1a0005;color:var(--red);font-size:12px;letter-spacing:1px;text-align:center;font-weight:700;">
+    📹 Enregistrement vidéo activé
   </div>
 
   <div class="cd-controls">
@@ -1334,6 +1357,8 @@ function stopChrono(){
   document.getElementById('chronoDisplay').className='chrono-display paused';
   document.getElementById('statusDot').className='status-dot';
   document.getElementById('statusText').textContent='EN PAUSE';
+  // Arrêt vidéo différé 30s
+  if(videoActive) videoStop(30000);
 }
 
 function resetChrono(){
@@ -1352,6 +1377,7 @@ function resetChrono(){
   document.getElementById('splitsRow').innerHTML='';
   document.getElementById('autostartBadge').style.display='none';
   document.getElementById('chronoDeltaBar').style.display='none';
+  if(videoActive) videoDoStop();
   renderDelta();
 }
 
@@ -1415,6 +1441,8 @@ function saveTime(){
   times.unshift({id:Date.now(),ms:ms,display:fmt(ms)+fmtMs(ms),note:note,session:session,splits:splits.slice()});
   saveData(); renderList(); resetChrono();
   showToast('✔ Temps enregistré','tgreen');
+  // Arrêt vidéo différé 30s après enregistrement du temps
+  if(videoActive) videoStop(30000);
   // Badge notification sur l'onglet Temps
   var tabs=document.querySelectorAll('.tab');
   tabs[1].textContent='📋 Temps ('+times.length+')';
@@ -1629,6 +1657,11 @@ function tickCD(){
       setTimeout(function(){ startChrono(); showToast('🚦 DÉPART SPÉCIALE AUTO !','tgreen'); },300);
     }
     cancelCD(); return;
+  }
+
+  // ── DÉMARRAGE VIDÉO À -30s ──
+  if(videoIsEnabled() && !videoActive && remaining>0 && remaining<=30500 && remaining>29500){
+    videoStart();
   }
 
   // ── ALERTES SONORES / VIBREUR ──
@@ -2248,8 +2281,118 @@ function tpRenderComp(){
 }
 
 // ═══════════════════════════════
-//  CAPTEUR GESTE CAMÉRA + BT
+//  ENREGISTREMENT VIDÉO SELFIE AUTO
 // ═══════════════════════════════
+var videoStream=null;
+var videoRecorder=null;
+var videoChunks=[];
+var videoActive=false;
+var videoStopTimer=null;
+var videoRecStart=null;
+var videoTimerInterval=null;
+var videoScheduledStart=null; // timer pour démarrage à -30s
+
+function videoIsEnabled(){
+  var tog=document.getElementById('videoAutoToggle');
+  return tog && tog.checked;
+}
+
+// Appel depuis tickCD quand il reste ~30s avant la fin
+function videoScheduleStart(delayMs){
+  if(!videoIsEnabled()) return;
+  if(videoScheduledStart) clearTimeout(videoScheduledStart);
+  videoScheduledStart=setTimeout(function(){
+    videoStart();
+  }, delayMs);
+}
+
+async function videoStart(){
+  if(videoActive) return;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia) return;
+
+  try{
+    // Caméra frontale + micro
+    videoStream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:'user', width:{ideal:1280}, height:{ideal:720}},
+      audio:true
+    });
+
+    // Preview
+    var preview=document.getElementById('videoPreview');
+    preview.srcObject=videoStream;
+    await preview.play();
+    document.getElementById('videoPreviewWrap').style.display='block';
+
+    // MediaRecorder — préférer mp4/webm selon support
+    var mimeType='video/webm;codecs=vp9';
+    if(!MediaRecorder.isTypeSupported(mimeType)) mimeType='video/webm';
+    if(!MediaRecorder.isTypeSupported(mimeType)) mimeType='video/mp4';
+
+    videoChunks=[];
+    videoRecorder=new MediaRecorder(videoStream, {mimeType:mimeType});
+    videoRecorder.ondataavailable=function(e){ if(e.data.size>0) videoChunks.push(e.data); };
+    videoRecorder.onstop=function(){ videoSave(); };
+    videoRecorder.start(1000); // chunk toutes les 1s
+
+    videoActive=true;
+    videoRecStart=Date.now();
+
+    // Timer affiché
+    videoTimerInterval=setInterval(function(){
+      var el=document.getElementById('videoRecTimer');
+      if(el && videoRecStart){
+        var s=Math.floor((Date.now()-videoRecStart)/1000);
+        var m=Math.floor(s/60); s=s%60;
+        el.textContent=(m>0?m+':':'')+pad(s);
+      }
+    },500);
+
+    // Indicateur dans le panel CH
+    var ind=document.getElementById('cdVideoIndicator');
+    if(ind) ind.style.display='block';
+
+    showToast('📹 Enregistrement démarré','tred');
+
+  } catch(e){
+    showToast('⚠ Caméra vidéo : '+e.message,'tred');
+  }
+}
+
+function videoStop(delayMs){
+  // Arrêt immédiat ou différé
+  if(videoStopTimer) clearTimeout(videoStopTimer);
+  var delay=delayMs||0;
+  videoStopTimer=setTimeout(function(){
+    videoDoStop();
+  }, delay);
+  if(delay>0) showToast('📹 Arrêt vidéo dans '+(delay/1000)+'s','tyellow');
+}
+
+function videoDoStop(){
+  if(!videoActive) return;
+  videoActive=false;
+  if(videoTimerInterval){ clearInterval(videoTimerInterval); videoTimerInterval=null; }
+  if(videoRecorder && videoRecorder.state!=='inactive') videoRecorder.stop();
+  if(videoStream){ videoStream.getTracks().forEach(function(t){ t.stop(); }); videoStream=null; }
+  document.getElementById('videoPreviewWrap').style.display='none';
+  var ind=document.getElementById('cdVideoIndicator');
+  if(ind) ind.style.display='none';
+}
+
+function videoSave(){
+  if(!videoChunks.length) return;
+  var mimeType=(videoRecorder&&videoRecorder.mimeType)||'video/webm';
+  var ext=mimeType.indexOf('mp4')>=0?'mp4':'webm';
+  var blob=new Blob(videoChunks,{type:mimeType});
+  var url=URL.createObjectURL(blob);
+  var now=new Date();
+  var fname='rallye_'+now.getFullYear()+pad(now.getMonth()+1)+pad(now.getDate())+'_'+pad(now.getHours())+pad(now.getMinutes())+'.'+ext;
+  var a=document.createElement('a');
+  a.href=url; a.download=fname; a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); },5000);
+  showToast('📹 Vidéo sauvegardée : '+fname,'tgreen');
+  videoChunks=[];
+}
 var gestureActive=false;
 var gestureStream=null;
 var gestureRafId=null;
