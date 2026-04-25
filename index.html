@@ -294,6 +294,30 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 .toast.tred{border-color:var(--red);color:var(--red);}
 .toast.tblue{border-color:var(--blue);color:var(--blue);}
 .toast.tyellow{border-color:var(--yellow);color:var(--yellow);}
+/* ── COMPARAISON TEMPS ── */
+.tp-check-row{display:flex;align-items:center;gap:10px;padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;cursor:pointer;}
+.tp-check-row input{width:16px;height:16px;accent-color:var(--orange);cursor:pointer;flex-shrink:0;}
+.tp-check-label{font-family:'Share Tech Mono',monospace;font-size:13px;flex:1;}
+.tp-check-time{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--muted);}
+
+.tp-comp-table{width:100%;border-collapse:collapse;}
+.tp-comp-table th{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;padding:8px 14px;background:var(--surface);border-bottom:2px solid var(--border);text-align:left;position:sticky;top:0;z-index:5;}
+.tp-comp-table th:last-child{text-align:right;}
+.tp-comp-row td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.tp-comp-row:nth-child(even) td{background:rgba(255,255,255,0.02);}
+.tp-comp-row.best-row td{background:rgba(0,230,118,0.06);}
+
+.tp-rank{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--muted);width:28px;}
+.tp-session{font-size:14px;font-weight:700;letter-spacing:1px;color:var(--text);}
+.tp-session-date{font-size:10px;color:var(--muted);margin-top:2px;}
+.tp-time-val{font-family:'Share Tech Mono',monospace;font-size:18px;color:var(--text);}
+.tp-best-badge{display:inline-block;background:#0d2218;color:var(--green);border:1px solid #1a3d26;font-size:10px;font-weight:700;letter-spacing:1px;padding:2px 7px;border-radius:10px;margin-left:6px;}
+.tp-delta{font-family:'Share Tech Mono',monospace;font-size:16px;font-weight:700;text-align:right;}
+.tp-delta.behind{color:var(--red);}
+.tp-delta.best{color:var(--green);}
+
+/* ── COMPARAISON TEMPS FIN ── */
+
 /* ===================== ROAD BOOK NOTES ===================== */
 /* MODE BAR */
 .nb-modebar{display:flex;background:var(--surface);border-bottom:2px solid var(--border);flex-shrink:0;}
@@ -413,7 +437,13 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
     <div class="logo-icon">🏁</div>
     <div class="logo-text">CO<span>PILOT</span></div>
   </div>
-  <div class="clock-now" id="clockNow">--:--:--</div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <button id="wakeLockBtn" onclick="toggleWakeLock()" title="Empêcher la mise en veille"
+      style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:18px;width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0;">
+      💤
+    </button>
+    <div class="clock-now" id="clockNow">--:--:--</div>
+  </div>
 </header>
 
 <div class="tabs">
@@ -478,6 +508,38 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
     <div id="chronoDeltaStatus" style="padding:4px 18px 6px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);background:var(--surface2);"></div>
   </div>
 
+  <!-- CAPTEUR GESTE + BT -->
+  <div style="display:flex;gap:8px;padding:8px 18px;background:var(--surface2);border-top:1px solid var(--border);flex-shrink:0;align-items:center;">
+
+    <!-- Bouton geste caméra -->
+    <button id="gestureBtn" onclick="toggleGesture()"
+      style="flex:1;padding:10px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;">
+      👋 GESTE : OFF
+    </button>
+
+    <!-- Sensibilité -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;">
+      <span style="font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;">Sensib.</span>
+      <input type="range" id="gestureSens" min="10" max="80" value="35" step="5"
+        style="width:70px;accent-color:var(--orange);" oninput="gestureUpdateSens()">
+      <span id="gestureSensVal" style="font-size:9px;color:var(--orange);font-family:'Share Tech Mono',monospace;">35</span>
+    </div>
+
+    <!-- Indicateur luminosité live -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;">
+      <span style="font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;">Lum.</span>
+      <div id="gestureLumBar" style="width:36px;height:18px;background:var(--border);border-radius:3px;overflow:hidden;">
+        <div id="gestureLumFill" style="height:100%;width:50%;background:var(--green);transition:width 0.1s;"></div>
+      </div>
+      <span id="gestureLumVal" style="font-size:9px;color:var(--muted);font-family:'Share Tech Mono',monospace;">—</span>
+    </div>
+
+  </div>
+
+  <!-- Canvas caché pour analyse caméra -->
+  <canvas id="gestureCanvas" width="64" height="64" style="display:none;"></canvas>
+  <video id="gestureVideo" autoplay playsinline muted style="display:none;"></video>
+
   <div class="splits-section" id="splitsSection" style="display:none">
     <div class="splits-label">Splits intermédiaires</div>
     <div class="splits-row" id="splitsRow"></div>
@@ -487,7 +549,15 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 
 <!-- ═══ TEMPS ENREGISTRÉS ═══ -->
 <div class="panel" id="panel-temps">
-  <div class="times-section" style="flex:1;overflow-y:auto;">
+
+  <!-- Sous-onglets -->
+  <div style="display:flex;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;">
+    <button class="tab active" id="tpTabListe" onclick="tpSetTab('liste')" style="font-size:12px;padding:10px 8px;">📋 Liste</button>
+    <button class="tab" id="tpTabComp"  onclick="tpSetTab('comp')"  style="font-size:12px;padding:10px 8px;">⚡ Comparaison</button>
+  </div>
+
+  <!-- ── LISTE ── -->
+  <div id="tpPanelListe" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;">
     <div class="times-header">
       <div class="times-title">📋 Temps enregistrés</div>
       <div class="times-count" id="timesCount">0</div>
@@ -503,6 +573,31 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
       <div class="empty-text">Aucun temps enregistré</div>
     </div>
   </div>
+
+  <!-- ── COMPARAISON ── -->
+  <div id="tpPanelComp" style="flex:1;overflow-y:auto;display:none;flex-direction:column;">
+
+    <!-- Sélection des spéciales à comparer -->
+    <div style="padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">Sélectionner les spéciales à comparer</div>
+      <div id="tpCompSelect" style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;"></div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button onclick="tpSelAll()" class="btn-sm">Tout cocher</button>
+        <button onclick="tpSelNone()" class="btn-sm">Tout décocher</button>
+        <button onclick="tpRenderComp()" style="flex:1;background:var(--orange);color:#000;border:none;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;padding:7px;border-radius:4px;cursor:pointer;">⚡ COMPARER</button>
+      </div>
+    </div>
+
+    <!-- Tableau de comparaison -->
+    <div id="tpCompResult" style="flex:1;overflow-y:auto;"></div>
+
+    <div class="empty-state" id="tpCompEmpty">
+      <div class="empty-icon">⏱</div>
+      <div class="empty-text">Sélectionnez des spéciales<br>et lancez la comparaison</div>
+    </div>
+
+  </div>
+
 </div>
 
 <!-- ═══ POINTAGE ═══ -->
@@ -587,6 +682,10 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
     <button class="btn btn-arm" id="btnArm" onclick="armCD()">▶ LANCER LE COMPTE À REBOURS</button>
     <button class="btn btn-cancel" id="btnCancel" onclick="cancelCD()">✕ ANNULER</button>
     <button class="btn btn-cd-reset" onclick="resetCD()">↺ RESET</button>
+    <button onclick="cdBeep(880,0.15,0.7);cdVibrate([100,50,100]);"
+      style="grid-column:1/-1;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;padding:10px;border-radius:6px;cursor:pointer;">
+      🔔 Tester son + vibreur
+    </button>
   </div>
 
 </div>
@@ -1379,6 +1478,67 @@ function dl(fn,content,type){
 // ─── COMPTE À REBOURS ───
 var cdArmed=false, cdIntervalRef=null, cdEndTs=null, cdTotalMs=null, cdAlerteSec=120000;
 
+// ── ALERTES SONORES / VIBREUR ──
+var cdAudioCtx=null;
+var cdAlertsFired={};  // garde trace des alertes déjà déclenchées pour éviter les doublons
+
+// Seuils d'alerte en secondes
+var CD_ALERT_THRESHOLDS=[
+  {sec:300, vib:[200],        beeps:1, label:'5 min'},
+  {sec:240, vib:[200],        beeps:1, label:'4 min'},
+  {sec:180, vib:[200],        beeps:1, label:'3 min'},
+  {sec:120, vib:[200],        beeps:1, label:'2 min'},
+  {sec:60,  vib:[300],        beeps:2, label:'1 min'},
+  {sec:30,  vib:[200,100,200],beeps:3, label:'30 s'},
+  {sec:20,  vib:[200,100,200],beeps:3, label:'20 s'},
+  {sec:10,  vib:[300,100,300,100,300],beeps:5, label:'10 s'},
+];
+
+function cdGetAudioCtx(){
+  if(!cdAudioCtx){
+    try{ cdAudioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+  }
+  return cdAudioCtx;
+}
+
+function cdBeep(freq,dur,vol){
+  var ctx=cdGetAudioCtx(); if(!ctx) return;
+  try{
+    var osc=ctx.createOscillator();
+    var gain=ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type='sine';
+    osc.frequency.value=freq||880;
+    gain.gain.value=vol||0.6;
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime+(dur||0.12));
+  }catch(e){}
+}
+
+function cdVibrate(pattern){
+  if(navigator.vibrate) navigator.vibrate(pattern);
+}
+
+function cdFireAlert(threshold, remaining){
+  var key='alert_'+threshold.sec;
+  if(cdAlertsFired[key]) return;  // déjà déclenché
+  cdAlertsFired[key]=true;
+
+  // Sons : beeps espacés de 150ms
+  var freq = threshold.sec<=10 ? 1200 : threshold.sec<=30 ? 1000 : 880;
+  for(var i=0;i<threshold.beeps;i++){
+    (function(idx){ setTimeout(function(){ cdBeep(freq, 0.15, 0.7); }, idx*200); })(i);
+  }
+  // Vibreur
+  cdVibrate(threshold.vib);
+  // Toast
+  showToast('⏰ '+threshold.label+' avant le CH !', threshold.sec<=10?'tred':threshold.sec<=30?'tred':'tyellow');
+}
+
+function cdResetAlerts(){
+  cdAlertsFired={};
+}
+
 function updateAutoIndicator(){
   var on=document.getElementById('autoStartToggle').checked;
   var ind=document.getElementById('cdAutoIndicator');
@@ -1411,6 +1571,7 @@ function armCD(){
   if(cdEndTs<=Date.now()){ showToast('⚠ L\'heure d\'arrivée au CH est déjà passée !','tred'); return; }
 
   cdArmed=true;
+  cdResetAlerts();  // réinitialiser les alertes à chaque nouveau compte à rebours
   document.getElementById('cdArrival').textContent=fmtHHMMSS(cdEndTs);
   document.getElementById('btnArm').style.display='none';
   document.getElementById('btnCancel').style.display='block';
@@ -1470,7 +1631,15 @@ function tickCD(){
     cancelCD(); return;
   }
 
+  // ── ALERTES SONORES / VIBREUR ──
   var totalSec=Math.ceil(remaining/1000);
+  CD_ALERT_THRESHOLDS.forEach(function(t){
+    // Déclencher quand on passe le seuil (on est dans la fenêtre de ±0.5s)
+    if(totalSec<=t.sec && totalSec>t.sec-1){
+      cdFireAlert(t, remaining);
+    }
+  });
+
   var mm=Math.floor(totalSec/60), ss=totalSec%60;
   var timeStr=mm+':'+pad(ss);
 
@@ -1678,19 +1847,6 @@ var nbNavMode='manuel';  // 'manuel' ou 'auto'
 var nbActiveRbId=null;   // road book chargé en course
 var nbGpsWatchId=null;
 
-// État du constructeur
-// dist, dir, rap, freinage = choix unique
-// quals, topos, flags, trans = tableaux multi-choix
-var nbState={
-  dist:null, dir:null, rap:null, freinage:null,
-  quals:[], topos:[], flags:[], trans:[],
-  free:''
-};
-
-// Catégories à choix unique (radio)
-var NB_SINGLE=['dist','dir','rap','freinage'];
-// Catégories à choix multiples (checkbox)
-var NB_MULTI=['quals','topos','flags','trans'];
 function nbInit(){
   nbLoadRoadBooks();
   nbRenderList();
@@ -1707,87 +1863,104 @@ function nbSetMode(m){
   if(m==='course'){ nbPopulateRbSelect(); }
 }
 
-// ── CONSTRUCTEUR ──
-var NB_CATS=['dist','dir','rap','qual','topo','flag','vit'];
+// ── CONSTRUCTEUR LIBRE PAR TOKENS ──
+// Chaque appui sur un bouton AJOUTE un token à la séquence dans l'ordre voulu
+var nbTokens=[];  // tableau de strings dans l'ordre de saisie
 
-function nbSel(cat,val){
-  // Toggle si déjà sélectionné
-  if(nbState[cat]===val) nbState[cat]=null;
-  else nbState[cat]=val;
-  nbState.free='';
-  document.getElementById('nbFreeInput').value='';
-  nbUpdateBuilder();
-}
+// Couleurs par catégorie de bouton
+var NB_TOKEN_COLORS={
+  'cat-dist':'var(--blue)',
+  'cat-flag':'var(--red)',
+  'cat-dir':'var(--orange)',
+  'cat-rap':'var(--yellow)',
+  'cat-qual':'var(--green)',
+  'cat-vit':'#aa44ff',
+  'free':'var(--muted)'
+};
 
-function nbUpdateFree(v){
-  nbState.free=v;
-  // Réinitialiser les autres
-  NB_CATS.forEach(function(c){ nbState[c]=null; });
-  nbUpdateBuilder();
-}
-
-function nbUpdateBuilder(){
-  // Mettre à jour les boutons sélectionnés
-  document.querySelectorAll('.nb-btn').forEach(function(btn){
-    var cat=btn.getAttribute('onclick')||'';
-    var m=cat.match(/nbSel\('(\w+)','([^']+)'\)/);
-    if(m) btn.classList.toggle('sel', nbState[m[1]]===m[2]);
+// Écoute des clics sur les boutons nb-btn via data-val
+document.addEventListener('click',function(e){
+  var btn=e.target.closest('.nb-btn[data-val]');
+  if(!btn) return;
+  var val=btn.getAttribute('data-val');
+  if(!val) return;
+  // Détecter la catégorie couleur
+  var cat='free';
+  ['cat-dist','cat-flag','cat-dir','cat-rap','cat-qual','cat-vit'].forEach(function(c){
+    if(btn.classList.contains(c)) cat=c;
   });
+  nbPushToken(val,cat);
+});
 
-  // Construire le texte de prévisualisation
-  var parts=[];
-  if(nbState.dist && nbState.dist!=='0') parts.push(nbState.dist+'m');
-  if(nbState.dir){
-    var dirMap={G:'←G',D:'D→',T:'↑TOUT DROIT',DC:'↩DEMI-TOUR'};
-    parts.push(dirMap[nbState.dir]||nbState.dir);
-  }
-  if(nbState.rap) parts.push(nbState.rap);
-  if(nbState.qual) parts.push(nbState.qual);
-  if(nbState.topo) parts.push(nbState.topo);
-  if(nbState.flag) parts.push(nbState.flag);
-  if(nbState.vit) parts.push(nbState.vit);
-  if(nbState.free) parts.push(nbState.free);
+function nbPushToken(val,cat){
+  cat=cat||'free';
+  nbTokens.push({val:val,cat:cat});
+  nbRenderTokens();
+}
 
-  var txt=parts.join(' · ')||'—';
-  document.getElementById('nbPreview').textContent=txt;
-  document.getElementById('nbAddBtn').disabled=parts.length===0;
+function nbBackspace(){
+  if(!nbTokens.length) return;
+  nbTokens.pop();
+  nbRenderTokens();
 }
 
 function nbClearBuilder(){
-  NB_CATS.forEach(function(c){ nbState[c]=null; });
-  nbState.free='';
-  document.getElementById('nbFreeInput').value='';
-  nbUpdateBuilder();
+  nbTokens=[];
+  nbRenderTokens();
 }
 
-function nbAddNote(){
-  var parts=[];
-  if(nbState.dist && nbState.dist!=='0') parts.push(nbState.dist+'m');
-  if(nbState.dir){
-    var dirMap={G:'←G',D:'D→',T:'↑',DC:'↩'};
-    parts.push(dirMap[nbState.dir]||nbState.dir);
+function nbRenderTokens(){
+  var wrap=document.getElementById('nbTokens');
+  var empty=document.getElementById('nbTokenEmpty');
+  var addBtn=document.getElementById('nbAddBtn');
+  if(!nbTokens.length){
+    wrap.innerHTML='<span id="nbTokenEmpty" style="color:var(--muted);font-size:13px;letter-spacing:1px;">— appuie sur un bouton pour commencer —</span>';
+    addBtn.disabled=true;
+    return;
   }
-  if(nbState.rap) parts.push(nbState.rap);
-  if(nbState.qual) parts.push(nbState.qual);
-  if(nbState.topo) parts.push(nbState.topo);
-  if(nbState.flag) parts.push(nbState.flag);
-  if(nbState.vit) parts.push(nbState.vit);
-  if(nbState.free) parts.push(nbState.free);
-  if(!parts.length) return;
+  addBtn.disabled=false;
+  wrap.innerHTML=nbTokens.map(function(t,i){
+    var col=NB_TOKEN_COLORS[t.cat]||'var(--muted)';
+    return '<span onclick="nbRemoveToken('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid '+col+';color:'+col+';font-family:Share Tech Mono,monospace;font-size:13px;font-weight:700;padding:4px 8px;border-radius:4px;cursor:pointer;user-select:none;" title="Supprimer">'+
+      t.val+
+      '<span style="font-size:10px;opacity:0.6;margin-left:2px;">×</span>'+
+      '</span>';
+  }).join('');
+}
+
+function nbRemoveToken(idx){
+  nbTokens.splice(idx,1);
+  nbRenderTokens();
+}
+
+function nbUpdateFree(v){ /* plus utilisé directement */ }
+
+function nbAddNote(){
+  if(!nbTokens.length) return;
+  var text=nbTokens.map(function(t){ return t.val; }).join(' ');
+
+  // Détecter direction pour le mode course (flèche)
+  var dir=null;
+  nbTokens.forEach(function(t){
+    if(t.cat==='cat-dir'){
+      if(t.val==='←G') dir='G';
+      else if(t.val==='D→') dir='D';
+      else if(t.val==='↑') dir='T';
+      else if(t.val==='↩DC') dir='DC';
+    }
+  });
 
   var note={
     id:Date.now(),
-    text:parts.join(' '),
-    dir:nbState.dir,
-    dist:nbState.dist,
-    rap:nbState.rap,
-    flag:nbState.flag
+    text:text,
+    dir:dir,
+    tokens:nbTokens.slice()
   };
 
   nbNotes.push(note);
   nbClearBuilder();
   nbRenderList();
-  showToast('#'+nbNotes.length+' — '+note.text,'tblue');
+  showToast('#'+nbNotes.length+' — '+text,'tblue');
 }
 
 function nbUndo(){
@@ -1847,15 +2020,23 @@ function nbLoadRoadBooks(){
 function nbSaveRb(){
   if(!nbNotes.length){ showToast('Aucune note à sauvegarder','tred'); return; }
   var now=new Date();
-  var name='RB '+now.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+' '+now.getHours()+'h'+pad(now.getMinutes());
-  var rb={id:Date.now(), name:name, notes:nbNotes.slice(), date:now.toLocaleDateString('fr-FR')};
+  // Prendre le nom du champ spéciale (prise de notes ou saisi manuellement)
+  var nameInput=document.getElementById('nbSpecialeName');
+  var name=(nameInput&&nameInput.value.trim())||'';
+  if(!name){
+    var defaultName='RB '+now.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+' '+now.getHours()+'h'+pad(now.getMinutes());
+    name=prompt('Nom de la spéciale :', defaultName);
+    if(name===null) return; // annulé
+    if(!name.trim()) name=defaultName;
+    if(nameInput) nameInput.value=name.trim();
+  }
+  var rb={id:Date.now(), name:name.trim(), notes:nbNotes.slice(), date:now.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})};
   nbRoadBooks.unshift(rb);
   localStorage.setItem('nb_roadbooks', JSON.stringify(nbRoadBooks));
   nbPopulateRbSelect();
-  // Auto-charger
   document.getElementById('nbRbSelect').value=rb.id;
   nbLoadRb();
-  showToast('💾 Road book sauvegardé ('+nbNotes.length+' notes)','tgreen');
+  showToast('💾 '+rb.name+' sauvegardé ('+nbNotes.length+' notes)','tgreen');
 }
 
 function nbPopulateRbSelect(){
@@ -1974,6 +2155,334 @@ function nbCheckAutoAdvance(lat,lng){
   // Ici on avance si on n'a pas avancé depuis 5s (simulation)
 }
 
+// ═══════════════════════════════
+//  COMPARAISON TEMPS (panel Temps)
+// ═══════════════════════════════
+var tpTab='liste';
+
+function tpSetTab(t){
+  tpTab=t;
+  document.getElementById('tpTabListe').className='tab'+(t==='liste'?' active':'');
+  document.getElementById('tpTabComp').className='tab'+(t==='comp'?' active':'');
+  document.getElementById('tpPanelListe').style.display=t==='liste'?'flex':'none';
+  document.getElementById('tpPanelComp').style.display=t==='comp'?'flex':'none';
+  if(t==='comp') tpBuildSelect();
+}
+
+function tpBuildSelect(){
+  var wrap=document.getElementById('tpCompSelect');
+  if(!times.length){
+    wrap.innerHTML='<div style="color:var(--muted);font-size:13px;padding:4px 0;">Aucun temps enregistré.</div>';
+    return;
+  }
+  wrap.innerHTML=times.map(function(t,i){
+    return '<label class="tp-check-row">'+
+      '<input type="checkbox" class="tp-cb" value="'+t.id+'" checked>'+
+      '<span class="tp-check-label">'+t.session+'</span>'+
+      '<span class="tp-check-time">'+t.display+'</span>'+
+      '</label>';
+  }).join('');
+}
+
+function tpSelAll(){
+  document.querySelectorAll('.tp-cb').forEach(function(cb){ cb.checked=true; });
+}
+function tpSelNone(){
+  document.querySelectorAll('.tp-cb').forEach(function(cb){ cb.checked=false; });
+}
+
+function tpRenderComp(){
+  var selected=[];
+  document.querySelectorAll('.tp-cb:checked').forEach(function(cb){
+    var id=parseInt(cb.value);
+    var t=times.find(function(x){ return x.id===id; });
+    if(t) selected.push(t);
+  });
+
+  var result=document.getElementById('tpCompResult');
+  var empty=document.getElementById('tpCompEmpty');
+
+  if(selected.length<2){
+    result.innerHTML='';
+    empty.style.display='block';
+    empty.querySelector('.empty-text').textContent='Sélectionnez au moins\n2 spéciales à comparer';
+    return;
+  }
+  empty.style.display='none';
+
+  // Trier par temps croissant
+  var sorted=selected.slice().sort(function(a,b){ return a.ms-b.ms; });
+  var bestMs=sorted[0].ms;
+
+  var html='<table class="tp-comp-table"><thead><tr>'+
+    '<th>#</th>'+
+    '<th>Spéciale</th>'+
+    '<th>Temps</th>'+
+    '<th>Écart</th>'+
+    '</tr></thead><tbody>';
+
+  sorted.forEach(function(t,i){
+    var isBest=(t.ms===bestMs);
+    var delta=t.ms-bestMs;
+    var deltaStr=isBest?'—':'+'+fmtDelta(delta).replace('+','');
+    // fmtDelta retourne ±MM:SS.d, on veut juste +SS.d ou +MM:SS.d
+    if(!isBest){
+      var abs=t.ms-bestMs;
+      var m=Math.floor(abs/60000),s=Math.floor((abs%60000)/1000),d=Math.floor((abs%1000)/100);
+      deltaStr='+'+(m>0?m+':'+pad(s):s)+'.'+d+'s';
+    }
+
+    html+='<tr class="tp-comp-row'+(isBest?' best-row':'')+'">'+
+      '<td class="tp-rank">'+(i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.')+'</td>'+
+      '<td>'+
+        '<div class="tp-session">'+t.session+(isBest?'<span class="tp-best-badge">BEST</span>':'')+'</div>'+
+        '<div class="tp-session-date">'+t.note.split('—')[1]+'</div>'+
+      '</td>'+
+      '<td><div class="tp-time-val">'+t.display+'</div></td>'+
+      '<td class="tp-delta '+(isBest?'best':'behind')+'">'+deltaStr+'</td>'+
+      '</tr>';
+  });
+
+  html+='</tbody></table>';
+  result.innerHTML=html;
+}
+
+// ═══════════════════════════════
+//  CAPTEUR GESTE CAMÉRA + BT
+// ═══════════════════════════════
+var gestureActive=false;
+var gestureStream=null;
+var gestureRafId=null;
+var gesturePrevLum=null;
+var gestureSensThreshold=35;    // seuil de chute de luminosité (%)
+var gestureCooldown=false;      // anti-rebond
+var gestureCooldownMs=1200;     // délai min entre deux déclenchements
+
+function gestureUpdateSens(){
+  gestureSensThreshold=parseInt(document.getElementById('gestureSens').value)||35;
+  document.getElementById('gestureSensVal').textContent=gestureSensThreshold;
+}
+
+async function toggleGesture(){
+  if(gestureActive){
+    gestureStop();
+  } else {
+    await gestureStart();
+  }
+}
+
+async function gestureStart(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    showToast('⚠ Caméra non disponible sur ce navigateur','tred'); return;
+  }
+  try{
+    // Caméra frontale, résolution minimale pour économiser la batterie
+    gestureStream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:'user', width:{ideal:64}, height:{ideal:64}}
+    });
+    var video=document.getElementById('gestureVideo');
+    video.srcObject=gestureStream;
+    await video.play();
+    gestureActive=true;
+    gestureUpdateBtn();
+    gesturePrevLum=null;
+    gestureRafId=requestAnimationFrame(gestureAnalyze);
+    showToast('👋 Capteur geste activé — passez la main','tgreen');
+  } catch(e){
+    showToast('⚠ Accès caméra refusé : '+e.message,'tred');
+  }
+}
+
+function gestureStop(){
+  gestureActive=false;
+  if(gestureRafId){ cancelAnimationFrame(gestureRafId); gestureRafId=null; }
+  if(gestureStream){ gestureStream.getTracks().forEach(function(t){ t.stop(); }); gestureStream=null; }
+  gestureUpdateBtn();
+  document.getElementById('gestureLumFill').style.width='0%';
+  document.getElementById('gestureLumVal').textContent='—';
+  showToast('👋 Capteur geste désactivé','tyellow');
+}
+
+function gestureAnalyze(){
+  if(!gestureActive) return;
+
+  var video=document.getElementById('gestureVideo');
+  var canvas=document.getElementById('gestureCanvas');
+  var ctx=canvas.getContext('2d');
+
+  if(video.readyState>=2){
+    // Dessiner la frame caméra sur le canvas 64x64
+    ctx.drawImage(video,0,0,64,64);
+    var pixels=ctx.getImageData(0,0,64,64).data;
+
+    // Calculer la luminosité moyenne
+    var total=0, count=pixels.length/4;
+    for(var i=0;i<pixels.length;i+=4){
+      // Luminance perceptuelle
+      total+=(pixels[i]*0.299 + pixels[i+1]*0.587 + pixels[i+2]*0.114);
+    }
+    var lum=Math.round(total/count);  // 0-255
+    var lumPct=Math.round(lum/255*100);
+
+    // Mettre à jour l'indicateur
+    var fill=document.getElementById('gestureLumFill');
+    var val=document.getElementById('gestureLumVal');
+    if(fill) fill.style.width=lumPct+'%';
+    if(fill) fill.style.background=lumPct<20?'var(--red)':lumPct<50?'var(--orange)':'var(--green)';
+    if(val) val.textContent=lumPct+'%';
+
+    // Détecter la chute de luminosité = geste
+    if(gesturePrevLum!==null && !gestureCooldown){
+      var drop=gesturePrevLum-lumPct;
+      if(drop>=gestureSensThreshold){
+        gestureFireSplit();
+      }
+    }
+    gesturePrevLum=lumPct;
+  }
+
+  // Analyser toutes les 80ms (≈12 fps, économie batterie)
+  gestureRafId=setTimeout(function(){ gestureRafId=requestAnimationFrame(gestureAnalyze); },80);
+}
+
+function gestureFireSplit(){
+  if(gestureCooldown) return;
+  gestureCooldown=true;
+
+  if(isRunning){
+    saveSplit();
+    // Flash visuel sur le bouton split
+    var btn=document.getElementById('btnLap');
+    if(btn){ btn.style.background='var(--green)'; setTimeout(function(){ btn.style.background=''; },300); }
+  } else if(!isRunning && elapsed===0){
+    // Pas encore démarré → démarrer le chrono
+    startChrono();
+  }
+
+  // Anti-rebond
+  setTimeout(function(){ gestureCooldown=false; }, gestureCooldownMs);
+}
+
+function gestureUpdateBtn(){
+  var btn=document.getElementById('gestureBtn');
+  if(!btn) return;
+  if(gestureActive){
+    btn.innerHTML='👋 GESTE : ON';
+    btn.style.borderColor='var(--green)';
+    btn.style.color='var(--green)';
+    btn.style.background='#001a0d';
+  } else {
+    btn.innerHTML='👋 GESTE : OFF';
+    btn.style.borderColor='var(--border)';
+    btn.style.color='var(--muted)';
+    btn.style.background='var(--surface)';
+  }
+}
+
+// ── BOUTON BLUETOOTH / CLAVIER ──
+// Écoute les touches clavier : Entrée, Espace, Volume+ (via MediaSession)
+document.addEventListener('keydown',function(e){
+  // Ignorer si on est dans un input
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
+
+  var handled=false;
+
+  if(e.code==='Enter'||e.code==='Space'||e.code==='VolumeUp'||e.key==='MediaPlayPause'){
+    // Entrée / Espace / Volume+ → Split si en course, sinon départ
+    if(isRunning){
+      saveSplit();
+      handled=true;
+    } else if(elapsed===0){
+      startChrono();
+      handled=true;
+    }
+  }
+
+  if(e.code==='VolumeDown'||e.key==='ArrowRight'){
+    // Volume- → Pause / Reprendre
+    if(isRunning){ stopChrono(); handled=true; }
+    else if(elapsed>0){ startChrono(); handled=true; }
+  }
+
+  if(handled){ e.preventDefault(); }
+});
+
+// MediaSession pour capturer les touches Volume sur mobile
+if('mediaSession' in navigator){
+  try{
+    navigator.mediaSession.setActionHandler('play', function(){ if(!isRunning) startChrono(); });
+    navigator.mediaSession.setActionHandler('pause', function(){ if(isRunning) stopChrono(); });
+    navigator.mediaSession.setActionHandler('nexttrack', function(){ if(isRunning) saveSplit(); });
+  } catch(e){}
+}
+
+// Arrêter la caméra si on quitte l'onglet chrono
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden && gestureActive) gestureStop();
+});
+
+// ═══════════════════════════════
+//  WAKE LOCK — écran toujours allumé
+// ═══════════════════════════════
+var wakeLock=null;
+var wakeLockActive=false;
+
+async function toggleWakeLock(){
+  if(wakeLockActive){
+    // Désactiver
+    if(wakeLock){ try{ await wakeLock.release(); }catch(e){} wakeLock=null; }
+    wakeLockActive=false;
+    updateWakeLockBtn();
+    showToast('💤 Veille réactivée','tyellow');
+  } else {
+    // Activer
+    if(!('wakeLock' in navigator)){
+      showToast('⚠ Wake Lock non supporté sur ce navigateur','tred');
+      return;
+    }
+    try{
+      wakeLock=await navigator.wakeLock.request('screen');
+      wakeLockActive=true;
+      updateWakeLockBtn();
+      showToast('🔆 Écran toujours allumé','tgreen');
+      // Se réactive automatiquement si l'app revient au premier plan
+      wakeLock.addEventListener('release',function(){
+        wakeLockActive=false;
+        updateWakeLockBtn();
+      });
+    } catch(e){
+      showToast('⚠ Impossible d\'activer : '+e.message,'tred');
+    }
+  }
+}
+
+// Réactiver automatiquement après retour au premier plan
+document.addEventListener('visibilitychange',async function(){
+  if(wakeLockActive && document.visibilityState==='visible'){
+    try{
+      wakeLock=await navigator.wakeLock.request('screen');
+    } catch(e){}
+  }
+});
+
+function updateWakeLockBtn(){
+  var btn=document.getElementById('wakeLockBtn');
+  if(!btn) return;
+  if(wakeLockActive){
+    btn.textContent='🔆';
+    btn.style.borderColor='var(--green)';
+    btn.style.color='var(--green)';
+    btn.style.background='#001a0d';
+    btn.title='Écran toujours allumé — cliquer pour désactiver';
+  } else {
+    btn.textContent='💤';
+    btn.style.borderColor='var(--border)';
+    btn.style.color='var(--muted)';
+    btn.style.background='var(--surface2)';
+    btn.title='Empêcher la mise en veille';
+  }
+}
+
 // ─── INIT ───
 (function(){
   var n=new Date();
@@ -1998,30 +2507,50 @@ updateAutoIndicator();
     <!-- Compteur flottant -->
     <div class="nb-counter-fab" id="nbCounterFab" onclick="nbToggleList()">📖 0 note(s)</div>
 
-    <!-- Constructeur de note -->
+    <!-- Nom de la spéciale + bouton sauver -->
+    <div style="display:flex;gap:8px;padding:8px 14px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;align-items:center;">
+      <input id="nbSpecialeName" placeholder="Nom de la spéciale (ex: ES3 Col du Noyer)" maxlength="50"
+        style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:14px;padding:7px 10px;border-radius:4px;outline:none;">
+      <button onclick="nbSaveRb()" style="background:var(--blue);color:#000;border:none;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;padding:7px 14px;border-radius:4px;cursor:pointer;white-space:nowrap;flex-shrink:0;">💾 SAUVER</button>
+    </div>
     <div class="nb-builder">
-      <div class="nb-preview">
-        <span class="nb-preview-text" id="nbPreview">—</span>
-        <button class="nb-preview-clear" onclick="nbClearBuilder()">✕</button>
+      <!-- Tokens affichés comme chips supprimables -->
+      <div id="nbTokens" style="display:flex;flex-wrap:wrap;gap:6px;min-height:36px;align-items:center;padding:4px 2px 6px;">
+        <span id="nbTokenEmpty" style="color:var(--muted);font-size:13px;letter-spacing:1px;">— appuie sur un bouton pour commencer —</span>
       </div>
-      <button class="nb-add-btn" id="nbAddBtn" onclick="nbAddNote()" disabled>✚ AJOUTER CETTE NOTE</button>
+      <!-- Barre d'actions -->
+      <div style="display:flex;gap:8px;margin-top:2px;">
+        <button onclick="nbBackspace()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:18px;padding:8px 14px;border-radius:5px;cursor:pointer;flex-shrink:0;">⌫</button>
+        <button class="nb-add-btn" id="nbAddBtn" onclick="nbAddNote()" disabled style="flex:1;margin:0;">✚ AJOUTER</button>
+      </div>
     </div>
 
-    <!-- Boutons de saisie -->
+    <!-- Boutons de saisie — dans l'ordre que tu veux -->
     <div class="nb-sections" id="nbSections">
 
       <!-- DISTANCE -->
       <div class="nb-section">
         <div class="nb-section-title">📏 Distance</div>
         <div class="nb-grid nb-grid-4">
-          <button class="nb-btn cat-dist" onclick="nbSel('dist','50')">50</button>
-          <button class="nb-btn cat-dist" onclick="nbSel('dist','100')">100</button>
-          <button class="nb-btn cat-dist" onclick="nbSel('dist','150')">150</button>
-          <button class="nb-btn cat-dist" onclick="nbSel('dist','200')">200</button>
-          <button class="nb-btn cat-dist" onclick="nbSel('dist','300')">300</button>
-          <button class="nb-btn cat-dist" onclick="nbSel('dist','400')">400</button>
-          <button class="nb-btn cat-dist" onclick="nbSel('dist','500')">500</button>
-          <button class="nb-btn cat-dist" onclick="nbSel('dist','0')" style="font-size:11px;">PAS DIST</button>
+          <button class="nb-btn cat-dist" data-val="50m">50m</button>
+          <button class="nb-btn cat-dist" data-val="100m">100m</button>
+          <button class="nb-btn cat-dist" data-val="150m">150m</button>
+          <button class="nb-btn cat-dist" data-val="200m">200m</button>
+          <button class="nb-btn cat-dist" data-val="300m">300m</button>
+          <button class="nb-btn cat-dist" data-val="400m">400m</button>
+          <button class="nb-btn cat-dist" data-val="500m">500m</button>
+          <button class="nb-btn cat-dist" data-val="sans dist" style="font-size:11px;">SANS</button>
+        </div>
+      </div>
+
+      <!-- FREINAGE -->
+      <div class="nb-section">
+        <div class="nb-section-title">🛑 Freinage</div>
+        <div class="nb-grid nb-grid-2">
+          <button class="nb-btn cat-flag" data-val="Frein fort">Frein fort</button>
+          <button class="nb-btn cat-flag" data-val="Frein léger">Frein léger</button>
+          <button class="nb-btn cat-flag" data-val="Soulage">Soulage</button>
+          <button class="nb-btn cat-flag" data-val="À fond">À fond</button>
         </div>
       </div>
 
@@ -2029,22 +2558,22 @@ updateAutoIndicator();
       <div class="nb-section">
         <div class="nb-section-title">↔️ Direction</div>
         <div class="nb-grid nb-grid-2">
-          <button class="nb-btn cat-dir" onclick="nbSel('dir','G')" style="font-size:18px;">← GAUCHE</button>
-          <button class="nb-btn cat-dir" onclick="nbSel('dir','D')" style="font-size:18px;">DROITE →</button>
-          <button class="nb-btn cat-dir" onclick="nbSel('dir','T')" style="font-size:13px;">↑ TOUT DROIT</button>
-          <button class="nb-btn cat-dir" onclick="nbSel('dir','DC')" style="font-size:12px;">↩ DEMI-TOUR</button>
+          <button class="nb-btn cat-dir" data-val="←G" style="font-size:18px;">← GAUCHE</button>
+          <button class="nb-btn cat-dir" data-val="D→" style="font-size:18px;">DROITE →</button>
+          <button class="nb-btn cat-dir" data-val="↑">↑ TOUT DROIT</button>
+          <button class="nb-btn cat-dir" data-val="↩DC">↩ DEMI-TOUR</button>
         </div>
       </div>
 
       <!-- RAPPORT -->
       <div class="nb-section">
-        <div class="nb-section-title">⚙️ Rapport de boîte</div>
+        <div class="nb-section-title">⚙️ Rapport</div>
         <div class="nb-grid nb-grid-5">
-          <button class="nb-btn cat-rap" onclick="nbSel('rap','1')">1</button>
-          <button class="nb-btn cat-rap" onclick="nbSel('rap','2')">2</button>
-          <button class="nb-btn cat-rap" onclick="nbSel('rap','3')">3</button>
-          <button class="nb-btn cat-rap" onclick="nbSel('rap','4')">4</button>
-          <button class="nb-btn cat-rap" onclick="nbSel('rap','5')">5</button>
+          <button class="nb-btn cat-rap" data-val="1">1</button>
+          <button class="nb-btn cat-rap" data-val="2">2</button>
+          <button class="nb-btn cat-rap" data-val="3">3</button>
+          <button class="nb-btn cat-rap" data-val="4">4</button>
+          <button class="nb-btn cat-rap" data-val="5">5</button>
         </div>
       </div>
 
@@ -2052,18 +2581,18 @@ updateAutoIndicator();
       <div class="nb-section">
         <div class="nb-section-title">📝 Qualificatif</div>
         <div class="nb-grid nb-grid-3">
-          <button class="nb-btn cat-qual" onclick="nbSel('qual','AF')">AF</button>
-          <button class="nb-btn cat-qual" onclick="nbSel('qual','Soulage')">Soulage</button>
-          <button class="nb-btn cat-qual" onclick="nbSel('qual','Serré')">Serré</button>
-          <button class="nb-btn cat-qual" onclick="nbSel('qual','Corde')">Corde</button>
-          <button class="nb-btn cat-qual" onclick="nbSel('qual','Pas corde')">Pas corde</button>
-          <button class="nb-btn cat-qual" onclick="nbSel('qual','Équerre')">Équerre</button>
-          <button class="nb-btn cat-qual" onclick="nbSel('qual','Épingle')">Épingle</button>
-          <button class="nb-btn cat-qual" onclick="nbSel('qual','Long')">Long</button>
-          <button class="nb-btn cat-qual" onclick="nbSel('qual','Court')">Court</button>
-          <button class="nb-btn cat-qual" onclick="nbSel('qual','Ouvert')">Ouvert</button>
-          <button class="nb-btn cat-qual" onclick="nbSel('qual','Resserré')">Resserré</button>
-          <button class="nb-btn cat-qual" onclick="nbSel('qual','Double')">Double</button>
+          <button class="nb-btn cat-qual" data-val="AF">AF</button>
+          <button class="nb-btn cat-qual" data-val="Serré">Serré</button>
+          <button class="nb-btn cat-qual" data-val="Corde">Corde</button>
+          <button class="nb-btn cat-qual" data-val="Pas corde">Pas corde</button>
+          <button class="nb-btn cat-qual" data-val="Équerre">Équerre</button>
+          <button class="nb-btn cat-qual" data-val="Épingle">Épingle</button>
+          <button class="nb-btn cat-qual" data-val="Long">Long</button>
+          <button class="nb-btn cat-qual" data-val="Court">Court</button>
+          <button class="nb-btn cat-qual" data-val="Ouvert">Ouvert</button>
+          <button class="nb-btn cat-qual" data-val="Resserré">Resserré</button>
+          <button class="nb-btn cat-qual" data-val="Double">Double</button>
+          <button class="nb-btn cat-qual" data-val="Glissant">Glissant</button>
         </div>
       </div>
 
@@ -2071,12 +2600,25 @@ updateAutoIndicator();
       <div class="nb-section">
         <div class="nb-section-title">⛰️ Topographie</div>
         <div class="nb-grid nb-grid-3">
-          <button class="nb-btn cat-qual" onclick="nbSel('topo','Montée')">Montée</button>
-          <button class="nb-btn cat-qual" onclick="nbSel('topo','Descente')">Descente</button>
-          <button class="nb-btn cat-qual" onclick="nbSel('topo','Plat')">Plat</button>
-          <button class="nb-btn cat-qual" onclick="nbSel('topo','Crête')">Crête</button>
-          <button class="nb-btn cat-qual" onclick="nbSel('topo','Intérieur')">Intérieur</button>
-          <button class="nb-btn cat-qual" onclick="nbSel('topo','Extérieur')">Extérieur</button>
+          <button class="nb-btn cat-qual" data-val="Montée">Montée</button>
+          <button class="nb-btn cat-qual" data-val="Descente">Descente</button>
+          <button class="nb-btn cat-qual" data-val="Plat">Plat</button>
+          <button class="nb-btn cat-qual" data-val="Crête">Crête</button>
+          <button class="nb-btn cat-qual" data-val="Intérieur">Intérieur</button>
+          <button class="nb-btn cat-qual" data-val="Extérieur">Extérieur</button>
+        </div>
+      </div>
+
+      <!-- TRANSITIONS -->
+      <div class="nb-section">
+        <div class="nb-section-title">🔗 Transitions</div>
+        <div class="nb-grid nb-grid-3">
+          <button class="nb-btn cat-vit" data-val="pour">pour</button>
+          <button class="nb-btn cat-vit" data-val="sur">sur</button>
+          <button class="nb-btn cat-vit" data-val="et">et</button>
+          <button class="nb-btn cat-vit" data-val="puis">puis</button>
+          <button class="nb-btn cat-vit" data-val="avant">avant</button>
+          <button class="nb-btn cat-vit" data-val="après">après</button>
         </div>
       </div>
 
@@ -2084,38 +2626,30 @@ updateAutoIndicator();
       <div class="nb-section">
         <div class="nb-section-title">⚠️ Alertes</div>
         <div class="nb-grid nb-grid-3">
-          <button class="nb-btn cat-flag" onclick="nbSel('flag','Attention')">Attention</button>
-          <button class="nb-btn cat-flag" onclick="nbSel('flag','Prudence')">Prudence</button>
-          <button class="nb-btn cat-flag" onclick="nbSel('flag','DANGER')">🚨 DANGER</button>
-          <button class="nb-btn cat-flag" onclick="nbSel('flag','Stop')">🛑 STOP</button>
-          <button class="nb-btn cat-flag" onclick="nbSel('flag','Aqua')">💧 Aqua</button>
-          <button class="nb-btn cat-flag" onclick="nbSel('flag','Boue')">🟤 Boue</button>
-        </div>
-      </div>
-
-      <!-- VITESSE -->
-      <div class="nb-section">
-        <div class="nb-section-title">🏎 Vitesse conseillée</div>
-        <div class="nb-grid nb-grid-3">
-          <button class="nb-btn cat-vit" onclick="nbSel('vit','V1')">V1</button>
-          <button class="nb-btn cat-vit" onclick="nbSel('vit','V2')">V2</button>
-          <button class="nb-btn cat-vit" onclick="nbSel('vit','V3')">V3</button>
+          <button class="nb-btn cat-flag" data-val="Attention">Attention</button>
+          <button class="nb-btn cat-flag" data-val="Prudence">Prudence</button>
+          <button class="nb-btn cat-flag" data-val="🚨DANGER">🚨 DANGER</button>
+          <button class="nb-btn cat-flag" data-val="🛑STOP">🛑 STOP</button>
+          <button class="nb-btn cat-flag" data-val="💧Aqua">💧 Aqua</button>
+          <button class="nb-btn cat-flag" data-val="🟤Boue">🟤 Boue</button>
         </div>
       </div>
 
       <!-- NOTE LIBRE -->
       <div class="nb-section">
         <div class="nb-section-title">✏️ Note libre</div>
-        <div style="padding:0 14px 8px;">
+        <div style="padding:0 14px 8px;display:flex;gap:8px;">
           <input id="nbFreeInput" placeholder="Texte libre..." maxlength="40"
-            style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:14px;padding:8px 12px;border-radius:4px;outline:none;"
-            oninput="nbUpdateFree(this.value)" onkeydown="if(event.key==='Enter')nbAddNote()">
+            style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:14px;padding:8px 10px;border-radius:4px;outline:none;"
+            onkeydown="if(event.key==='Enter'&&this.value.trim()){nbPushToken(this.value.trim());this.value='';}">
+          <button onclick="var v=document.getElementById('nbFreeInput').value.trim();if(v){nbPushToken(v);document.getElementById('nbFreeInput').value='';}"
+            style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;padding:8px 12px;border-radius:4px;cursor:pointer;">+</button>
         </div>
       </div>
 
     </div><!-- /nb-sections -->
 
-    <!-- Annuler -->
+    <!-- Annuler dernière note -->
     <div class="nb-undo-bar">
       <button class="nb-undo-btn" onclick="nbUndo()">↩ Annuler la dernière note</button>
     </div>
