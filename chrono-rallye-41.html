@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0a0a">
+<title>CoPilot Rallye</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root{--red:#e8001d;--orange:#ff6b00;--blue:#00aaff;--bg:#0a0a0a;--surface:#111;--surface2:#1a1a1a;--border:#2a2a2a;--text:#f0f0f0;--muted:#555;--green:#00e676;--yellow:#ffd600;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
+header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+.logo{display:flex;align-items:center;gap:8px;}
+.logo-icon{width:28px;height:28px;background:var(--red);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;font-size:12px;}
+.logo-text{font-size:17px;font-weight:700;letter-spacing:3px;text-transform:uppercase;}
+.logo-text span{color:var(--red);}
+.clock-now{font-family:'Share Tech Mono',monospace;font-size:16px;color:var(--muted);}
+.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;}
+.tab{flex-shrink:0;padding:10px 10px;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:none;border:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;}
+.tab.active{color:var(--text);border-bottom-color:var(--red);}
+.panel{display:none;flex:1;flex-direction:column;overflow-y:auto;overflow-x:hidden;}
+.panel.active{display:flex;}
+.btn{border:none;border-radius:6px;font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;}
+.btn:active{transform:scale(0.96);}
+/* CHRONO */
+.session-bar{background:var(--surface2);padding:8px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-shrink:0;}
+.session-bar label{font-size:11px;color:var(--muted);letter-spacing:1px;white-space:nowrap;}
+.session-bar input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;padding:5px 8px;border-radius:4px;outline:none;}
+.session-bar input:focus{border-color:var(--red);}
+.autostart-badge{margin:0 16px 4px;padding:6px 12px;border-radius:5px;border:1px solid var(--border);background:var(--surface2);font-size:11px;color:var(--muted);text-align:center;display:none;}
+.autostart-badge.active{border-color:var(--blue);color:var(--blue);background:#001a2a;}
+.chrono-section{padding:12px 16px 8px;text-align:center;flex-shrink:0;}
+.chrono-label{font-size:10px;letter-spacing:4px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;}
+.chrono-display{font-family:'Share Tech Mono',monospace;font-size:clamp(64px,18vw,96px);line-height:1;color:var(--text);transition:color 0.2s;letter-spacing:2px;}
+.chrono-display.running{color:var(--green);}
+.chrono-display.paused{color:var(--orange);}
+.chrono-ms{font-family:'Share Tech Mono',monospace;font-size:28px;color:var(--muted);margin-top:2px;}
+.status-bar{display:flex;justify-content:center;gap:6px;margin-top:6px;align-items:center;}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);}
+.status-dot.running{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.status-text{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.controls{display:flex;flex-direction:column;gap:8px;padding:8px 16px 8px;flex-shrink:0;}
+.btn-start{background:var(--green);color:#000;font-size:18px;padding:18px;width:100%;}
+.btn-start:disabled{background:#1a3d26;color:#2a5a3a;cursor:not-allowed;}
+.controls-race{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.btn-stop{background:var(--red);color:#fff;font-size:20px;padding:26px 10px;letter-spacing:2px;width:100%;}
+.btn-lap{background:var(--surface2);color:var(--orange);border:2px solid var(--orange);font-size:20px;padding:26px 10px;letter-spacing:2px;width:100%;}
+.controls-bottom{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.btn-reset{background:var(--surface2);color:var(--muted);border:1px solid var(--border);font-size:13px;padding:12px;width:100%;}
+.btn-save{background:var(--orange);color:#000;font-size:13px;padding:12px;width:100%;}
+.delta-inline{display:none;flex-shrink:0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+.delta-inline-body{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:7px 16px;gap:8px;background:var(--surface2);}
+.delta-inline-status{padding:3px 16px 5px;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);background:var(--surface2);}
+.gesture-bar{display:flex;gap:8px;padding:7px 16px;background:var(--surface2);border-top:1px solid var(--border);flex-shrink:0;align-items:center;}
+.gesture-btn{flex:1;padding:9px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;}
+.splits-section{padding:6px 16px;border-top:1px solid var(--border);background:var(--surface2);flex-shrink:0;}
+.splits-label{font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;}
+.splits-row{display:flex;gap:5px;flex-wrap:wrap;}
+.split-chip{font-family:'Share Tech Mono',monospace;font-size:11px;background:var(--bg);border:1px solid var(--border);padding:2px 7px;border-radius:3px;color:var(--orange);}
+/* TIMES */
+.times-section{flex:1;overflow-y:auto;}
+.times-header{display:flex;justify-content:space-between;align-items:center;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;}
+.times-title{font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;}
+.times-count{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--red);background:#1a0005;border:1px solid #3a0010;padding:2px 7px;border-radius:10px;}
+.actions-row{display:flex;gap:6px;padding:6px 16px;background:var(--surface2);border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.btn-sm{padding:5px 10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;border-radius:4px;cursor:pointer;transition:all 0.15s;}
+.btn-sm:hover{color:var(--text);border-color:var(--text);}
+.btn-sm.danger:hover{color:var(--red);border-color:var(--red);}
+.btn-sm.export{color:var(--green);border-color:#1a3d26;}
+.btn-sm.export:hover{background:#0d2218;border-color:var(--green);}
+.times-list{list-style:none;}
+.time-item{display:grid;grid-template-columns:30px 1fr auto auto;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--border);}
+.time-item:nth-child(even){background:rgba(255,255,255,0.02);}
+.time-num{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);text-align:center;}
+.time-value{font-family:'Share Tech Mono',monospace;font-size:17px;}
+.time-note{font-size:10px;color:var(--muted);margin-top:1px;}
+.time-badge{font-size:10px;letter-spacing:1px;padding:2px 5px;border-radius:3px;font-weight:700;white-space:nowrap;}
+.badge-best{background:#0d2218;color:var(--green);border:1px solid #1a3d26;}
+.badge-saved{background:#1a0005;color:#ff4060;border:1px solid #3a0010;}
+.time-del{background:none;border:none;color:var(--border);font-size:16px;cursor:pointer;padding:3px;transition:color 0.15s;}
+.time-del:hover{color:var(--red);}
+.empty-state{padding:32px 16px;text-align:center;color:var(--muted);}
+.empty-icon{font-size:36px;margin-bottom:8px;opacity:0.3;}
+.empty-text{font-size:13px;letter-spacing:1px;line-height:1.6;}
+/* COMPTE A REBOURS */
+.cd-config{background:var(--surface2);border-bottom:1px solid var(--border);padding:12px 16px;flex-shrink:0;}
+.cd-config-title{font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:10px;}
+.cd-input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:20px;padding:7px 10px;border-radius:4px;outline:none;text-align:center;width:100%;color-scheme:dark;}
+.cd-input:focus{border-color:var(--blue);}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--border);padding:9px 12px;border-radius:4px;}
+.toggle-label{font-size:13px;font-weight:700;color:var(--text);letter-spacing:1px;}
+.toggle-hint{font-size:10px;color:var(--muted);margin-top:2px;}
+.toggle-switch{position:relative;width:46px;height:25px;flex-shrink:0;}
+.toggle-switch input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:25px;cursor:pointer;transition:background 0.3s;}
+.toggle-slider::before{content:'';position:absolute;width:19px;height:19px;border-radius:50%;background:var(--muted);left:3px;top:3px;transition:transform 0.3s,background 0.3s;}
+.toggle-switch input:checked+.toggle-slider{background:#001a2a;border:1px solid var(--blue);}
+.toggle-switch input:checked+.toggle-slider::before{transform:translateX(21px);background:var(--blue);}
+.cd-display-section{padding:16px 16px 8px;text-align:center;flex-shrink:0;}
+.cd-display{font-family:'Share Tech Mono',monospace;font-size:clamp(60px,18vw,90px);line-height:1;letter-spacing:2px;transition:color 0.25s;color:var(--blue);}
+.cd-display.cd-go{color:var(--blue);}
+.cd-display.cd-warn{color:var(--yellow);}
+.cd-display.cd-danger{color:var(--red);animation:flash 0.5s ease-in-out infinite;}
+.cd-display.cd-done{color:var(--green);}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:0.25}}
+.cd-sub{font-size:12px;letter-spacing:2px;margin-top:6px;color:var(--muted);text-transform:uppercase;}
+.cd-time-row{display:flex;justify-content:space-around;padding:6px 16px 0;flex-shrink:0;}
+.cd-time-cell{text-align:center;}
+.cd-time-label{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:2px;}
+.cd-time-val{font-family:'Share Tech Mono',monospace;font-size:18px;}
+.cd-time-val.hl{color:var(--blue);}
+.cd-bar-wrap{margin:10px 16px 0;background:var(--border);border-radius:3px;height:4px;overflow:hidden;}
+.cd-bar-fill{height:100%;border-radius:3px;background:var(--blue);transition:width 0.8s linear,background 0.3s;width:0%;}
+.cd-phase{display:flex;align-items:center;justify-content:center;gap:6px;margin:8px 16px 0;padding:8px 14px;border-radius:6px;font-size:12px;letter-spacing:2px;font-weight:700;text-transform:uppercase;border:1px solid var(--border);color:var(--muted);background:var(--surface2);transition:all 0.3s;min-height:40px;}
+.p-wait{border-color:var(--border);color:var(--muted);}
+.p-go{border-color:var(--blue);color:var(--blue);background:#001a2a;}
+.p-warn{border-color:var(--yellow);color:var(--yellow);background:#1a1400;}
+.p-danger{border-color:var(--red);color:var(--red);background:#1a0005;}
+.p-done{border-color:var(--green);color:var(--green);background:#001a0d;}
+.diode{width:48px;height:48px;border-radius:50%;border:2px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:18px;font-weight:700;color:var(--muted);transition:all 0.15s;}
+.diode.on-5{background:#1a0a00;border-color:#ff6b00;color:#ff6b00;box-shadow:0 0 12px #ff6b0088;}
+.diode.on-4,.diode.on-3{background:#1a1400;border-color:var(--yellow);color:var(--yellow);box-shadow:0 0 12px #ffd60088;}
+.diode.on-2{background:#1a0005;border-color:var(--red);color:var(--red);box-shadow:0 0 14px #e8001d99;}
+.diode.on-1{background:#300010;border-color:var(--red);color:var(--red);box-shadow:0 0 20px var(--red);animation:diodePulse 0.4s ease-in-out infinite;}
+@keyframes diodePulse{0%,100%{box-shadow:0 0 20px var(--red)}50%{box-shadow:0 0 40px var(--red),0 0 60px #ff003366}}
+.cd-auto-indicator{margin:6px 16px 0;padding:6px 12px;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:11px;letter-spacing:1px;text-align:center;display:none;}
+.cd-auto-indicator.on{border-color:var(--blue);color:var(--blue);background:#001a2a;}
+.cd-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 16px;flex-shrink:0;}
+.btn-arm{background:var(--blue);color:#000;grid-column:1/-1;font-size:15px;padding:15px;}
+.btn-arm:disabled{background:#001a2a;color:#004466;cursor:not-allowed;}
+.btn-cancel{background:var(--surface2);color:var(--muted);border:1px solid var(--border);grid-column:1/-1;display:none;font-size:13px;padding:11px;}
+.btn-cd-reset{background:var(--surface2);color:var(--muted);border:1px solid var(--border);grid-column:1/-1;font-size:13px;padding:11px;}
+/* DELTA SPLITS */
+.delta-config{background:var(--surface2);border-bottom:1px solid var(--border);padding:10px 16px;flex-shrink:0;}
+.ref-select{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;padding:7px 10px;border-radius:4px;outline:none;cursor:pointer;color-scheme:dark;}
+.ref-select:focus{border-color:var(--blue);}
+.btn-ref-clear{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;padding:7px 10px;border-radius:4px;cursor:pointer;}
+.btn-ref-clear:hover{color:var(--red);border-color:var(--red);}
+.ref-info{margin-top:7px;padding:7px 10px;border-radius:4px;background:#001a2a;border:1px solid var(--blue);display:none;}
+.ref-info-name{font-size:12px;font-weight:700;color:var(--blue);letter-spacing:1px;}
+.ref-info-detail{font-size:10px;color:var(--muted);margin-top:2px;}
+.delta-live{padding:12px 16px 8px;text-align:center;flex-shrink:0;}
+.delta-value{font-family:'Share Tech Mono',monospace;font-size:clamp(44px,12vw,64px);line-height:1;letter-spacing:2px;transition:color 0.2s;color:var(--muted);}
+.delta-value.ahead{color:var(--green);}
+.delta-value.behind{color:var(--red);}
+.delta-value.equal{color:var(--yellow);}
+.delta-badge{display:inline-block;margin-top:7px;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border:1px solid var(--border);color:var(--muted);background:var(--surface2);transition:all 0.25s;}
+.delta-badge.ahead{border-color:var(--green);color:var(--green);background:#001a0d;}
+.delta-badge.behind{border-color:var(--red);color:var(--red);background:#1a0005;}
+.delta-badge.equal{border-color:var(--yellow);color:var(--yellow);background:#1a1400;}
+.delta-splits-section{flex:1;overflow-y:auto;border-top:1px solid var(--border);}
+.delta-splits-header{display:grid;grid-template-columns:30px 1fr 1fr 72px;gap:7px;padding:7px 16px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.delta-split-row{display:grid;grid-template-columns:30px 1fr 1fr 72px;gap:7px;padding:9px 16px;border-bottom:1px solid var(--border);align-items:center;}
+.delta-split-row.current{background:rgba(0,170,255,0.06);border-left:3px solid var(--blue);padding-left:13px;}
+.delta-split-row.ahead-row{border-left:3px solid var(--green);padding-left:13px;}
+.delta-split-row.behind-row{border-left:3px solid var(--red);padding-left:13px;}
+.ds-num{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);text-align:center;}
+.ds-cur{font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--text);}
+.ds-ref{font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--muted);}
+.ds-delta{font-family:'Share Tech Mono',monospace;font-size:14px;font-weight:700;text-align:right;}
+.ds-delta.ahead{color:var(--green);}
+.ds-delta.behind{color:var(--red);}
+.ds-delta.equal{color:var(--yellow);}
+.ds-delta.pending{color:var(--muted);}
+.ds-sub{font-size:9px;color:var(--blue);margin-top:2px;letter-spacing:1px;}
+.ds-ref-sub{font-size:9px;color:var(--muted);margin-top:2px;}
+/* DELTA RETURN */
+.delta-return-banner{display:none;flex-direction:column;flex-shrink:0;border-top:1px solid var(--border);}
+/* ROUTE */
+.rb-toolbar{display:flex;gap:7px;padding:8px 12px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;align-items:center;}
+.rb-mode-btn{padding:6px 12px;border-radius:18px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all 0.2s;}
+.rb-mode-btn.active-reco{border-color:var(--orange);color:var(--orange);background:#1a0900;}
+.rb-mode-btn.active-rallye{border-color:var(--green);color:var(--green);background:#001a0d;}
+.rb-status{margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);text-align:right;line-height:1.4;}
+.rb-instruments{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;background:var(--bg);border-bottom:2px solid var(--border);flex-shrink:0;}
+.rb-inst-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 3px;border-right:1px solid var(--border);}
+.rb-inst-cell:last-child{border-right:none;}
+.rb-inst-label{font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:2px;}
+.rb-inst-val{font-family:'Share Tech Mono',monospace;font-size:20px;line-height:1;color:var(--text);font-weight:700;}
+.rb-inst-unit{font-size:8px;color:var(--muted);margin-top:1px;letter-spacing:1px;}
+.rb-inst-cell.speed .rb-inst-val{font-size:24px;color:var(--blue);}
+.rb-inst-cell.speed.fast .rb-inst-val{color:var(--orange);}
+.rb-inst-cell.speed.veryfast .rb-inst-val{color:var(--red);}
+.rb-inst-cell.partial .rb-inst-val{color:var(--green);}
+.rb-inst-cell.total .rb-inst-val{color:var(--yellow);}
+#rb-map{flex:1;min-height:0;z-index:0;}
+.rb-bottom{display:flex;gap:7px;padding:8px 12px;background:var(--surface2);border-top:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
+.rb-btn{flex:1;min-width:60px;padding:9px 6px;border:none;border-radius:6px;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all 0.15s;text-transform:uppercase;}
+.rb-btn:active{transform:scale(0.96);}
+.rb-btn-rec{background:var(--red);color:#fff;}
+.rb-btn-rec.recording{background:#7a0010;animation:recPulse 1s ease-in-out infinite;}
+@keyframes recPulse{0%,100%{opacity:1}50%{opacity:0.6}}
+.rb-btn-note{background:var(--orange);color:#000;}
+.rb-btn-center{background:var(--surface);color:var(--blue);border:1px solid var(--blue);}
+.rb-btn-clear{background:var(--surface);color:var(--muted);border:1px solid var(--border);}
+.rb-btn-save{background:var(--blue);color:#000;}
+.rb-btn-load{background:var(--surface);color:var(--text);border:1px solid var(--border);}
+.rb-note-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;display:none;align-items:flex-end;}
+.rb-note-overlay.show{display:flex;}
+.rb-note-box{width:100%;background:var(--surface);padding:18px;border-radius:14px 14px 0 0;border-top:1px solid var(--border);}
+.rb-note-title{font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:10px;}
+.rb-note-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:10px;}
+.rb-note-tag{padding:9px 5px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;border-radius:5px;cursor:pointer;text-align:center;}
+.rb-note-tag.t-danger{border-color:var(--red);color:var(--red);}
+.rb-note-tag.t-warn{border-color:var(--yellow);color:var(--yellow);}
+.rb-note-tag.t-info{border-color:var(--blue);color:var(--blue);}
+.rb-note-input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;padding:7px 10px;border-radius:4px;outline:none;margin-bottom:9px;}
+.rb-note-input:focus{border-color:var(--orange);}
+.rb-note-actions{display:flex;gap:7px;}
+.rb-note-ok{flex:1;padding:11px;background:var(--orange);color:#000;border:none;border-radius:6px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;cursor:pointer;}
+.rb-note-cancel{padding:11px 14px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:6px;font-family:'Rajdhani',sans-serif;font-size:13px;cursor:pointer;}
+.rb-routes{position:fixed;right:0;top:0;bottom:0;width:88vw;max-width:300px;background:var(--surface);border-left:1px solid var(--border);z-index:8000;transform:translateX(100%);transition:transform 0.3s;display:flex;flex-direction:column;}
+.rb-routes.open{transform:translateX(0);}
+.rb-routes-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.rb-route-item{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer;}
+.rb-route-item:hover{background:rgba(255,255,255,0.03);}
+.rb-route-dot{width:9px;height:9px;border-radius:50%;background:var(--blue);flex-shrink:0;}
+.rb-route-name{flex:1;font-size:13px;font-weight:700;}
+.rb-route-detail{font-size:10px;color:var(--muted);margin-top:1px;}
+.rb-route-del{background:none;border:none;color:var(--border);font-size:15px;cursor:pointer;padding:3px;}
+.rb-route-del:hover{color:var(--red);}
+/* NOTES */
+.nb-modebar{display:flex;background:var(--surface);border-bottom:2px solid var(--border);flex-shrink:0;}
+.nb-modetab{flex:1;padding:10px 6px;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:none;border:none;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;}
+.nb-modetab.active-prise{color:var(--orange);border-bottom-color:var(--orange);}
+.nb-modetab.active-course{color:var(--green);border-bottom-color:var(--green);}
+.nb-prise{display:flex;flex-direction:column;flex:1;overflow:hidden;position:relative;}
+.nb-counter-fab{position:absolute;top:8px;right:12px;background:var(--surface2);border:1px solid var(--border);border-radius:18px;padding:3px 10px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);cursor:pointer;z-index:10;}
+.nb-counter-fab.has-notes{border-color:var(--orange);color:var(--orange);}
+.nb-builder{background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 12px;flex-shrink:0;}
+.nb-add-btn{width:100%;padding:11px;background:var(--orange);color:#000;border:none;border-radius:6px;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;letter-spacing:2px;cursor:pointer;margin-top:6px;}
+.nb-add-btn:disabled{background:#2a1500;color:#554400;cursor:not-allowed;}
+.nb-sections{flex:1;overflow-y:auto;padding:6px 0 60px;}
+.nb-section{margin-bottom:2px;}
+.nb-section-title{font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;padding:5px 12px 3px;}
+.nb-grid{display:grid;gap:5px;padding:0 12px;}
+.nb-grid-2{grid-template-columns:1fr 1fr;}
+.nb-grid-3{grid-template-columns:1fr 1fr 1fr;}
+.nb-grid-4{grid-template-columns:1fr 1fr 1fr 1fr;}
+.nb-grid-5{grid-template-columns:1fr 1fr 1fr 1fr 1fr;}
+.nb-btn{padding:11px 3px;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-align:center;transition:all 0.12s;line-height:1.2;}
+.nb-btn:active{transform:scale(0.93);}
+.cat-dist{border-color:#334;}
+.cat-dir{border-color:#334;}
+.cat-rap{border-color:#334;}
+.cat-qual{border-color:#334;font-size:12px;}
+.cat-flag{border-color:#334;font-size:12px;}
+.cat-vit{border-color:#334;font-size:12px;}
+.nb-undo-bar{position:sticky;bottom:0;padding:7px 12px;background:var(--bg);border-top:1px solid var(--border);}
+.nb-undo-btn{width:100%;padding:9px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:5px;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;cursor:pointer;}
+.nb-undo-btn:hover{color:var(--red);border-color:var(--red);}
+.nb-list-wrap{position:fixed;right:0;top:0;bottom:0;width:88vw;max-width:300px;background:var(--surface);border-left:1px solid var(--border);z-index:8000;transform:translateX(100%);transition:transform 0.3s;display:flex;flex-direction:column;}
+.nb-list-wrap.open{transform:translateX(0);}
+.nb-list-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.nb-list-title{font-size:11px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;}
+.nb-list-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;}
+.nb-list-actions{display:flex;gap:7px;padding:7px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.nb-list-scroll{flex:1;overflow-y:auto;}
+.nb-note-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);}
+.nb-note-num{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);width:20px;text-align:right;flex-shrink:0;}
+.nb-note-text{flex:1;font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--text);}
+.nb-note-del{background:none;border:none;color:var(--border);font-size:14px;cursor:pointer;padding:2px 3px;}
+.nb-note-del:hover{color:var(--red);}
+/* MODE COURSE */
+.nb-course{display:flex;flex-direction:column;flex:1;overflow:hidden;}
+.nb-course-select{padding:10px 12px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:7px;align-items:center;}
+.nb-rb-select{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;padding:7px 9px;border-radius:4px;outline:none;color-scheme:dark;}
+.nb-nav-options{display:flex;gap:7px;padding:7px 12px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;}
+.nb-nav-opt{flex:1;padding:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;border-radius:4px;cursor:pointer;text-align:center;}
+.nb-nav-opt.sel{border-color:var(--green);color:var(--green);background:#001a0d;}
+.nb-current-note{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center;position:relative;}
+.nb-note-num-big{font-size:12px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
+.nb-note-main{font-family:'Share Tech Mono',monospace;font-size:clamp(26px,7vw,44px);color:var(--text);line-height:1.3;letter-spacing:2px;font-weight:700;}
+.nb-note-dir-arrow{font-size:clamp(56px,16vw,88px);line-height:1;margin:6px 0;}
+.nb-note-next{margin-top:14px;padding:9px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;max-width:100%;}
+.nb-note-next-label{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:3px;}
+.nb-note-next-text{font-family:'Share Tech Mono',monospace;font-size:16px;color:var(--muted);}
+.nb-progress-bar{position:absolute;top:0;left:0;right:0;height:3px;background:var(--border);}
+.nb-progress-fill{height:100%;background:var(--green);transition:width 0.3s;}
+.nb-course-controls{display:grid;grid-template-columns:1fr 2fr 1fr;gap:7px;padding:9px 12px;background:var(--surface2);border-top:1px solid var(--border);flex-shrink:0;}
+.nb-ctrl-prev{background:var(--surface);color:var(--muted);border:1px solid var(--border);font-family:'Rajdhani',sans-serif;font-size:20px;padding:14px;border-radius:5px;cursor:pointer;}
+.nb-ctrl-next{background:var(--green);color:#000;border:none;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:2px;padding:14px;border-radius:5px;cursor:pointer;}
+.nb-ctrl-next:active{transform:scale(0.97);}
+.nb-ctrl-restart{background:var(--surface);color:var(--muted);border:1px solid var(--border);font-family:'Rajdhani',sans-serif;font-size:12px;padding:14px 6px;border-radius:5px;cursor:pointer;}
+.nb-course-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);text-align:center;padding:24px;}
+.nb-course-empty-icon{font-size:40px;margin-bottom:10px;opacity:0.3;}
+.nb-course-empty-text{font-size:12px;letter-spacing:1px;line-height:1.6;}
+/* COMPARAISON TEMPS */
+.tp-check-row{display:flex;align-items:center;gap:9px;padding:5px 9px;background:var(--bg);border:1px solid var(--border);border-radius:4px;cursor:pointer;}
+.tp-check-row input{width:15px;height:15px;accent-color:var(--orange);cursor:pointer;flex-shrink:0;}
+.tp-check-label{font-family:'Share Tech Mono',monospace;font-size:12px;flex:1;}
+.tp-check-time{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--muted);}
+.tp-comp-table{width:100%;border-collapse:collapse;}
+.tp-comp-table th{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;padding:7px 12px;background:var(--surface);border-bottom:2px solid var(--border);text-align:left;position:sticky;top:0;z-index:5;}
+.tp-comp-table th:last-child{text-align:right;}
+.tp-comp-row td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.tp-comp-row:nth-child(even) td{background:rgba(255,255,255,0.02);}
+.tp-comp-row.best-row td{background:rgba(0,230,118,0.06);}
+.tp-rank{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--muted);width:26px;}
+.tp-session{font-size:13px;font-weight:700;letter-spacing:1px;color:var(--text);}
+.tp-session-date{font-size:9px;color:var(--muted);margin-top:1px;}
+.tp-time-val{font-family:'Share Tech Mono',monospace;font-size:16px;color:var(--text);}
+.tp-best-badge{display:inline-block;background:#0d2218;color:var(--green);border:1px solid #1a3d26;font-size:9px;font-weight:700;letter-spacing:1px;padding:1px 5px;border-radius:9px;margin-left:5px;}
+.tp-delta{font-family:'Share Tech Mono',monospace;font-size:14px;font-weight:700;text-align:right;}
+.tp-delta.behind{color:var(--red);}
+.tp-delta.best{color:var(--green);}
+/* PLANNING */
+.pl-panel{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.pl-config{background:var(--surface2);border-bottom:1px solid var(--border);padding:10px 14px;flex-shrink:0;}
+.pl-config-title{font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:9px;}
+.pl-row{display:flex;gap:7px;align-items:center;margin-bottom:7px;}
+.pl-label{font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;white-space:nowrap;width:90px;flex-shrink:0;}
+.pl-input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:14px;padding:5px 9px;border-radius:4px;outline:none;text-align:center;color-scheme:dark;}
+.pl-input:focus{border-color:var(--orange);}
+.pl-input-sm{width:56px;flex:none;}
+.pl-es-list{flex:1;overflow-y:auto;}
+.pl-es-card{background:var(--surface2);border-bottom:2px solid var(--border);}
+.pl-es-header{display:flex;align-items:center;gap:7px;padding:7px 12px;background:var(--surface);border-bottom:1px solid var(--border);}
+.pl-es-num{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--orange);background:#1a0900;border:1px solid var(--orange);padding:2px 7px;border-radius:9px;flex-shrink:0;}
+.pl-es-body{padding:7px 12px;display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.pl-es-field{display:flex;flex-direction:column;gap:2px;}
+.pl-es-field-label{font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.pl-es-field input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:13px;padding:4px 7px;border-radius:4px;outline:none;text-align:center;color-scheme:dark;width:100%;}
+.pl-es-field input:focus{border-color:var(--orange);}
+.pl-es-field.full{grid-column:1/-1;}
+.pl-es-field input[type=text]{text-align:left;font-family:'Rajdhani',sans-serif;font-size:12px;}
+.pl-timeline{padding:10px 14px;}
+.pl-tl-title{font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
+.pl-tl-row{display:flex;gap:9px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--border);}
+.pl-tl-time{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--text);width:48px;flex-shrink:0;}
+.pl-tl-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+.pl-tl-label{font-size:12px;font-weight:700;flex:1;}
+.pl-tl-dur{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);text-align:right;flex-shrink:0;}
+.pl-tl-row.type-parc .pl-tl-dot{background:var(--green);}
+.pl-tl-row.type-asst .pl-tl-dot{background:var(--orange);}
+.pl-tl-row.type-routier .pl-tl-dot{background:var(--blue);}
+.pl-tl-row.type-3min .pl-tl-dot{background:var(--yellow);}
+.pl-tl-row.type-es .pl-tl-dot{background:var(--red);}
+.pl-tl-row.type-arrivee .pl-tl-dot{background:#aa44ff;}
+.pl-tl-row.active-now{background:rgba(255,107,0,0.08);border-left:3px solid var(--orange);padding-left:5px;border-radius:3px;}
+.pl-tl-row.done{opacity:0.4;}
+.pl-actions{padding:9px 14px;display:flex;gap:7px;flex-shrink:0;background:var(--surface2);border-top:1px solid var(--border);}
+.pl-btn{flex:1;padding:11px 6px;border:none;border-radius:5px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;text-transform:uppercase;}
+.pl-btn:active{transform:scale(0.97);}
+.pl-btn-calc{background:var(--orange);color:#000;}
+.pl-btn-auto{background:var(--green);color:#000;}
+.pl-btn-clear{background:var(--surface);color:var(--muted);border:1px solid var(--border);}
+.pl-current-es{margin:7px 14px;padding:9px 12px;background:#001a0d;border:1px solid var(--green);border-radius:5px;display:none;}
+.pl-current-es-label{font-size:9px;letter-spacing:2px;color:var(--green);text-transform:uppercase;margin-bottom:3px;}
+.pl-current-es-text{font-size:14px;font-weight:700;color:var(--text);}
+.pl-current-es-actions{display:flex;gap:5px;margin-top:7px;}
+.pl-current-btn{flex:1;padding:7px;border:none;border-radius:4px;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;}
+/* TOAST */
+.toast{position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-110px);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:9px 20px;border-radius:38px;font-size:13px;letter-spacing:1px;font-weight:700;z-index:9999;transition:transform 0.3s cubic-bezier(.175,.885,.32,1.275);white-space:nowrap;pointer-events:none;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.tgreen{border-color:var(--green);color:var(--green);}
+.toast.tred{border-color:var(--red);color:var(--red);}
+.toast.tblue{border-color:var(--blue);color:var(--blue);}
+.toast.tyellow{border-color:var(--yellow);color:var(--yellow);}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<header>
+  <div class="logo">
+    <div class="logo-icon">🏁</div>
+    <div class="logo-text">CO<span>PILOT</span></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button id="wakeLockBtn" onclick="toggleWakeLock()" title="Veille écran"
+      style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:16px;width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0;">💤</button>
+    <div class="clock-now" id="clockNow">--:--:--</div>
+  </div>
+</header>
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('chrono')">⏱ Chrono</button>
+  <button class="tab" id="tabTemps" onclick="switchTab('temps')">📋 Temps</button>
+  <button class="tab" onclick="switchTab('pointage')">🕐 CH</button>
+  <button class="tab" onclick="switchTab('delta')">Δ Splits</button>
+  <button class="tab" onclick="switchTab('route')">🗺 Route</button>
+  <button class="tab" onclick="switchTab('notes')">📖 Notes</button>
+  <button class="tab" onclick="switchTab('planning')">📅 Plan</button>
+  <button class="tab" onclick="switchTab('telem')">📡 Télém.</button>
+</div>
+
+<!-- ═══ CHRONO ═══ -->
+<div class="panel active" id="panel-chrono">
+  <div class="session-bar">
+    <label>ES</label>
+    <input type="text" id="sessionInput" placeholder="Ex : ES1 – Col du Rosier" maxlength="40">
+  </div>
+  <div class="autostart-badge" id="autostartBadge"></div>
+  <div class="chrono-section">
+    <div class="chrono-label">Temps de spéciale</div>
+    <div class="chrono-display" id="chronoDisplay">00:00</div>
+    <div class="chrono-ms" id="chronoMs">.000</div>
+    <div class="status-bar">
+      <div class="status-dot" id="statusDot"></div>
+      <div class="status-text" id="statusText">EN ATTENTE</div>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="btn btn-start" id="btnStart" onclick="startChrono()">▶ DÉPART</button>
+    <div class="controls-race" id="controlsRace" style="display:none">
+      <button class="btn btn-stop" id="btnStop" onclick="stopChrono()">⏸ PAUSE</button>
+      <button class="btn btn-lap" id="btnLap" onclick="saveSplit()" disabled>⚡ SPLIT</button>
+    </div>
+    <div class="controls-bottom">
+      <button class="btn btn-reset" onclick="resetChrono()">↺ RESET</button>
+      <button class="btn btn-save" id="btnSave" onclick="saveTime()" disabled>✚ ENREGISTRER</button>
+    </div>
+  </div>
+  <!-- Delta inline -->
+  <div class="delta-inline" id="chronoDeltaBar">
+    <div class="delta-inline-body">
+      <div>
+        <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:2px;">Δ Prochain split</div>
+        <div id="chronoDeltaVal" style="font-family:'Share Tech Mono',monospace;font-size:24px;color:var(--muted);">—</div>
+      </div>
+      <div style="width:1px;height:34px;background:var(--border);"></div>
+      <div style="text-align:right;">
+        <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:2px;">Réf S<span id="chronoDeltaIdx">—</span></div>
+        <div id="chronoDeltaRef" style="font-family:'Share Tech Mono',monospace;font-size:17px;color:var(--muted);">—</div>
+      </div>
+    </div>
+    <div class="delta-inline-status" id="chronoDeltaStatus"></div>
+  </div>
+  <!-- Capteur geste -->
+  <div class="gesture-bar">
+    <button id="gestureBtn" class="gesture-btn" onclick="toggleGesture()">👋 GESTE : OFF</button>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0;">
+      <span style="font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;">Sensib.</span>
+      <input type="range" id="gestureSens" min="10" max="80" value="35" step="5" style="width:64px;accent-color:var(--orange);" oninput="gestureUpdateSens()">
+      <span id="gestureSensVal" style="font-size:8px;color:var(--orange);font-family:'Share Tech Mono',monospace;">35</span>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0;">
+      <span style="font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;">Lum.</span>
+      <div style="width:34px;height:16px;background:var(--border);border-radius:3px;overflow:hidden;">
+        <div id="gestureLumFill" style="height:100%;width:50%;background:var(--green);transition:width 0.1s;"></div>
+      </div>
+      <span id="gestureLumVal" style="font-size:8px;color:var(--muted);font-family:'Share Tech Mono',monospace;">—</span>
+    </div>
+  </div>
+  <canvas id="gestureCanvas" width="64" height="64" style="display:none;"></canvas>
+  <video id="gestureVideo" autoplay playsinline muted style="display:none;"></video>
+  <!-- Preview vidéo -->
+  <div id="videoPreviewWrap" style="display:none;position:fixed;top:54px;right:6px;z-index:500;border:2px solid var(--red);border-radius:5px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.6);">
+    <video id="videoPreview" autoplay playsinline muted style="width:80px;height:107px;object-fit:cover;display:block;transform:scaleX(-1);"></video>
+    <div id="videoRecDot" style="position:absolute;top:3px;left:3px;width:7px;height:7px;border-radius:50%;background:var(--red);animation:pulse 1s ease-in-out infinite;"></div>
+    <div id="videoRecTimer" style="position:absolute;bottom:2px;left:0;right:0;text-align:center;font-family:Share Tech Mono,monospace;font-size:10px;color:#fff;text-shadow:0 1px 3px #000;"></div>
+  </div>
+  <div class="splits-section" id="splitsSection" style="display:none">
+    <div class="splits-label">Splits</div>
+    <div class="splits-row" id="splitsRow"></div>
+  </div>
+</div>
+
+<!-- ═══ TEMPS ═══ -->
+<div class="panel" id="panel-temps">
+  <div style="display:flex;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;">
+    <button class="tab active" id="tpTabListe" onclick="tpSetTab('liste')" style="font-size:11px;padding:9px 8px;">📋 Liste</button>
+    <button class="tab" id="tpTabComp" onclick="tpSetTab('comp')" style="font-size:11px;padding:9px 8px;">⚡ Comparaison</button>
+  </div>
+  <div id="tpPanelListe" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;">
+    <div class="times-header">
+      <div class="times-title">Temps enregistrés</div>
+      <div class="times-count" id="timesCount">0</div>
+    </div>
+    <div class="actions-row">
+      <button class="btn-sm export" onclick="exportCSV()">⬇ CSV</button>
+      <button class="btn-sm export" onclick="exportTXT()">⬇ TXT</button>
+      <button class="btn-sm danger" onclick="clearAll()">🗑 Effacer</button>
+    </div>
+    <ul class="times-list" id="timesList"></ul>
+    <div class="empty-state" id="emptyState"><div class="empty-icon">🏎</div><div class="empty-text">Aucun temps enregistré</div></div>
+  </div>
+  <div id="tpPanelComp" style="flex:1;overflow-y:auto;display:none;flex-direction:column;">
+    <div style="padding:9px 12px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:7px;">Sélectionner les spéciales</div>
+      <div id="tpCompSelect" style="display:flex;flex-direction:column;gap:5px;max-height:150px;overflow-y:auto;"></div>
+      <div style="display:flex;gap:7px;margin-top:7px;">
+        <button onclick="tpSelAll()" class="btn-sm">Tout</button>
+        <button onclick="tpSelNone()" class="btn-sm">Aucun</button>
+        <button onclick="tpRenderComp()" style="flex:1;background:var(--orange);color:#000;border:none;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;padding:6px;border-radius:4px;cursor:pointer;">⚡ COMPARER</button>
+      </div>
+    </div>
+    <div id="tpCompResult" style="flex:1;overflow-y:auto;"></div>
+    <div class="empty-state" id="tpCompEmpty"><div class="empty-icon">⏱</div><div class="empty-text">Sélectionnez au moins 2 spéciales</div></div>
+  </div>
+</div>
+
+<!-- ═══ CH ═══ -->
+<div class="panel" id="panel-pointage">
+  <div class="cd-config">
+    <div class="cd-config-title">⚙ Configuration</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:9px;">
+      <div>
+        <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:3px;">Heure départ</div>
+        <input type="time" class="cd-input" id="cdStartTime" step="1" style="font-size:15px;padding:7px 5px;">
+        <div style="font-size:9px;color:var(--muted);text-align:center;">départ liaison</div>
+      </div>
+      <div>
+        <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:3px;">+ Durée (min)</div>
+        <input type="number" class="cd-input" id="cdMinutes" value="15" min="1" max="999" step="1">
+        <div style="font-size:9px;color:var(--muted);text-align:center;">jusqu'au CH</div>
+      </div>
+      <div>
+        <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:3px;">Alerte (min)</div>
+        <input type="number" class="cd-input" id="cdAlerte" value="2" min="1" max="60" step="1" style="font-size:18px;">
+        <div style="font-size:9px;color:var(--muted);text-align:center;">avant le CH</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:7px;">
+      <div class="toggle-row">
+        <div><div class="toggle-label">Chrono auto à 0:00</div><div class="toggle-hint">Le chrono démarre à la fin du compte à rebours</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="autoStartToggle" onchange="updateAutoIndicator()"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">📹 Vidéo selfie auto</div><div class="toggle-hint">Démarre 30s avant le départ · S'arrête 30s après</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="videoAutoToggle"><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+  </div>
+  <div class="cd-display-section">
+    <div style="font-size:10px;letter-spacing:4px;color:var(--muted);margin-bottom:5px;text-transform:uppercase;">Temps restant</div>
+    <div class="cd-display cd-go" id="cdDisplay">--:--</div>
+    <div class="cd-sub" id="cdSub">Configurez la durée et lancez</div>
+  </div>
+  <div class="cd-time-row">
+    <div class="cd-time-cell"><div class="cd-time-label">Heure actuelle</div><div class="cd-time-val" id="cdNow">--:--:--</div></div>
+    <div class="cd-time-cell"><div class="cd-time-label">Arrivée CH</div><div class="cd-time-val hl" id="cdArrival">--:--:--</div></div>
+  </div>
+  <div class="cd-bar-wrap"><div class="cd-bar-fill" id="cdBarFill"></div></div>
+  <div class="cd-phase p-wait" id="cdPhase">⏳ En attente</div>
+  <!-- Diodes -->
+  <div id="diodesWrap" style="display:none;justify-content:center;gap:12px;padding:12px 16px 4px;flex-shrink:0;">
+    <div class="diode" id="d5"><span>5</span></div>
+    <div class="diode" id="d4"><span>4</span></div>
+    <div class="diode" id="d3"><span>3</span></div>
+    <div class="diode" id="d2"><span>2</span></div>
+    <div class="diode" id="d1"><span>1</span></div>
+  </div>
+  <div class="cd-auto-indicator" id="cdAutoIndicator">🔄 Chrono se lancera automatiquement à 0:00</div>
+  <div id="cdVideoIndicator" style="display:none;margin:5px 16px 0;padding:6px 12px;border-radius:4px;border:1px solid var(--red);background:#1a0005;color:var(--red);font-size:11px;letter-spacing:1px;text-align:center;font-weight:700;">📹 Enregistrement vidéo activé</div>
+  <div class="cd-controls">
+    <button class="btn btn-arm" id="btnArm" onclick="armCD()">▶ LANCER LE COMPTE À REBOURS</button>
+    <button class="btn btn-cancel" id="btnCancel" onclick="cancelCD()">✕ ANNULER</button>
+    <button class="btn btn-cd-reset" onclick="resetCD()">↺ RESET</button>
+    <button onclick="cdBeep(880,0.15,0.7);cdVibrate([100,50,100]);" style="grid-column:1/-1;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;padding:9px;border-radius:5px;cursor:pointer;">🔔 Tester son + vibreur</button>
+  </div>
+  <!-- Assistance -->
+  <div style="border-top:2px solid var(--border);padding:10px 16px;background:var(--surface2);flex-shrink:0;">
+    <div style="font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:9px;">🔧 Assistance</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div>
+        <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:3px;">Entrée parc</div>
+        <input type="time" id="asstEntree" step="1" class="cd-input" style="font-size:15px;padding:5px 7px;color-scheme:dark;">
+      </div>
+      <div>
+        <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:3px;">Sortie parc</div>
+        <input type="time" id="asstSortie" step="1" class="cd-input" style="font-size:15px;padding:5px 7px;color-scheme:dark;">
+      </div>
+    </div>
+    <div style="margin-bottom:7px;">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:3px;">Nom spéciale</div>
+      <input type="text" id="asstNom" placeholder="Ex : ES3 — Col du Noyer" maxlength="40" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;padding:6px 9px;border-radius:4px;outline:none;">
+    </div>
+    <button onclick="openAssistanceFullscreen()" style="width:100%;padding:12px;background:var(--orange);color:#000;border:none;border-radius:5px;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;letter-spacing:2px;cursor:pointer;">📺 PLEIN ÉCRAN ASSISTANCE</button>
+  </div>
+</div>
+
+<!-- ═══ DELTA ═══ -->
+<div class="panel" id="panel-delta">
+  <div class="delta-config">
+    <div style="font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">Spéciale de référence</div>
+    <div style="display:flex;gap:7px;align-items:center;">
+      <select class="ref-select" id="refSelect" onchange="selectRef()"><option value="">— Choisir —</option></select>
+      <button class="btn-ref-clear" onclick="clearRef()">✕</button>
+    </div>
+    <div class="ref-info" id="refInfo"><div class="ref-info-name" id="refInfoName"></div><div class="ref-info-detail" id="refInfoDetail"></div></div>
+  </div>
+  <div class="delta-live">
+    <div style="font-size:9px;letter-spacing:4px;color:var(--muted);margin-bottom:5px;text-transform:uppercase;">Écart en cours</div>
+    <div class="delta-value" id="deltaValue">—</div>
+    <div class="delta-badge" id="deltaBadge">Aucune référence</div>
+  </div>
+  <div class="delta-splits-section">
+    <div class="delta-splits-header"><div>#</div><div>En cours</div><div>Référence</div><div style="text-align:right">Δ Écart</div></div>
+    <div id="deltaSplitsList"></div>
+    <div class="empty-state" id="deltaEmpty"><div class="empty-icon">📈</div><div class="empty-text">Lancez le chrono et prenez des splits</div></div>
+  </div>
+  <!-- Bannière retour -->
+  <div class="delta-return-banner" id="deltaReturnBanner">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 16px;background:var(--surface2);">
+      <span id="deltaReturnLabel" style="font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;"></span>
+      <button onclick="cancelSplitReturn();switchTab('chrono');" style="background:none;border:1px solid var(--border);color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;padding:3px 10px;border-radius:4px;cursor:pointer;">✕ Rester</button>
+    </div>
+    <div style="height:3px;background:var(--border);"><div id="deltaReturnBar" style="height:100%;background:var(--blue);width:100%;border-radius:2px;"></div></div>
+  </div>
+</div>
+
+<!-- ═══ ROUTE ═══ -->
+<div class="panel" id="panel-route">
+  <div class="rb-toolbar">
+    <button class="rb-mode-btn" id="rbBtnReco" onclick="rbSetMode('reco')">🔴 Reconn.</button>
+    <button class="rb-mode-btn" id="rbBtnRallye" onclick="rbSetMode('rallye')">🟢 Rallye</button>
+    <div class="rb-status"><span id="rbGpsStatus">GPS : —</span><span id="rbPtsCount">0 pt(s)</span></div>
+  </div>
+  <div class="rb-instruments">
+    <div class="rb-inst-cell speed" id="rbCellSpeed">
+      <div class="rb-inst-label">Vitesse</div>
+      <div class="rb-inst-val" id="rbSpeed">0</div>
+      <div class="rb-inst-unit">km/h</div>
+    </div>
+    <div class="rb-inst-cell partial">
+      <div class="rb-inst-label">Trip 1</div>
+      <div class="rb-inst-val" id="rbTrip1">0.00</div>
+      <div class="rb-inst-unit">km</div>
+    </div>
+    <div class="rb-inst-cell partial">
+      <div class="rb-inst-label">Trip 2</div>
+      <div class="rb-inst-val" id="rbTrip2">0.00</div>
+      <div class="rb-inst-unit">km</div>
+    </div>
+    <div class="rb-inst-cell total">
+      <div class="rb-inst-label">Total</div>
+      <div class="rb-inst-val" id="rbTripTotal">0.00</div>
+      <div class="rb-inst-unit">km</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;">
+    <div style="border-right:1px solid var(--border);"></div>
+    <button onclick="rbResetTrip(1)" style="padding:4px 0;background:none;border:none;border-right:1px solid var(--border);color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;">↺ RAZ</button>
+    <button onclick="rbResetTrip(2)" style="padding:4px 0;background:none;border:none;border-right:1px solid var(--border);color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;">↺ RAZ</button>
+    <button onclick="rbResetTrip(0)" style="padding:4px 0;background:none;border:none;color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;">↺ TOUT</button>
+  </div>
+  <div id="rb-map"></div>
+  <div class="rb-bottom" id="rbBottomReco">
+    <button class="rb-btn rb-btn-rec" id="rbBtnRecord" onclick="rbToggleRecord()">⏺ REC</button>
+    <button class="rb-btn rb-btn-note" onclick="rbOpenNote()">📍 NOTE</button>
+    <button class="rb-btn rb-btn-center" id="rbBtnCenter" onclick="rbCenterGps()">◎ GPS</button>
+    <button class="rb-btn rb-btn-save" onclick="rbSaveRoute()">💾</button>
+    <button class="rb-btn rb-btn-clear" onclick="rbClearTrack()">🗑</button>
+  </div>
+  <div class="rb-bottom" id="rbBottomRallye" style="display:none">
+    <button class="rb-btn rb-btn-load" onclick="rbShowRoutes()">📂 Charger tracé</button>
+    <button class="rb-btn rb-btn-center" onclick="rbCenterGps()">◎ GPS</button>
+  </div>
+  <div class="rb-routes" id="rbRoutesPanel">
+    <div class="rb-routes-header">
+      <span style="font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;">Tracés</span>
+      <button onclick="rbHideRoutes()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">✕</button>
+    </div>
+    <div id="rbRoutesItems" style="flex:1;overflow-y:auto;"></div>
+    <div class="empty-state" id="rbRoutesEmpty"><div class="empty-icon">🗺</div><div class="empty-text">Aucun tracé sauvegardé</div></div>
+  </div>
+</div>
+
+<!-- ═══ NOTES ═══ -->
+<div class="panel" id="panel-notes">
+  <div class="nb-modebar">
+    <button class="nb-modetab active-prise" id="nbTabPrise" onclick="nbSetMode('prise')">✏️ Prise de notes</button>
+    <button class="nb-modetab" id="nbTabCourse" onclick="nbSetMode('course')">🏁 Mode course</button>
+  </div>
+  <div class="nb-prise" id="nbPanelPrise">
+    <div class="nb-counter-fab" id="nbCounterFab" onclick="nbToggleList()">📖 0 note(s)</div>
+    <!-- Nom spéciale + sauver -->
+    <div style="display:flex;gap:7px;padding:7px 12px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;align-items:center;">
+      <input id="nbSpecialeName" placeholder="Nom spéciale (ex: ES3 Col du Noyer)" maxlength="50" style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;padding:6px 9px;border-radius:4px;outline:none;">
+      <button onclick="nbSaveRb()" style="background:var(--blue);color:#000;border:none;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;padding:6px 12px;border-radius:4px;cursor:pointer;white-space:nowrap;">💾 SAUVER</button>
+    </div>
+    <!-- Builder -->
+    <div class="nb-builder">
+      <div id="nbTokens" style="display:flex;flex-wrap:wrap;gap:5px;min-height:34px;align-items:center;padding:3px 1px 5px;">
+        <span id="nbTokenEmpty" style="color:var(--muted);font-size:12px;letter-spacing:1px;">— appuie sur un bouton —</span>
+      </div>
+      <div style="display:flex;gap:7px;margin-top:1px;">
+        <button onclick="nbBackspace()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:16px;padding:7px 12px;border-radius:4px;cursor:pointer;flex-shrink:0;">⌫</button>
+        <button class="nb-add-btn" id="nbAddBtn" onclick="nbAddNote()" disabled style="flex:1;margin:0;padding:9px;">✚ AJOUTER</button>
+      </div>
+    </div>
+    <!-- Boutons -->
+    <div class="nb-sections" id="nbSections">
+      <div class="nb-section"><div class="nb-section-title">📏 Distance</div>
+        <div class="nb-grid nb-grid-4">
+          <button class="nb-btn cat-dist" data-val="50m">50m</button><button class="nb-btn cat-dist" data-val="100m">100m</button><button class="nb-btn cat-dist" data-val="150m">150m</button><button class="nb-btn cat-dist" data-val="200m">200m</button>
+          <button class="nb-btn cat-dist" data-val="300m">300m</button><button class="nb-btn cat-dist" data-val="400m">400m</button><button class="nb-btn cat-dist" data-val="500m">500m</button><button class="nb-btn cat-dist" data-val="sans" style="font-size:10px;">SANS</button>
+        </div></div>
+      <div class="nb-section"><div class="nb-section-title">🛑 Freinage</div>
+        <div class="nb-grid nb-grid-2">
+          <button class="nb-btn cat-flag" data-val="Frein fort">Frein fort</button><button class="nb-btn cat-flag" data-val="Frein léger">Frein léger</button>
+          <button class="nb-btn cat-flag" data-val="Soulage">Soulage</button><button class="nb-btn cat-flag" data-val="À fond">À fond</button>
+        </div></div>
+      <div class="nb-section"><div class="nb-section-title">↔️ Direction</div>
+        <div class="nb-grid nb-grid-2">
+          <button class="nb-btn cat-dir" data-val="←G" style="font-size:16px;">← GAUCHE</button><button class="nb-btn cat-dir" data-val="D→" style="font-size:16px;">DROITE →</button>
+          <button class="nb-btn cat-dir" data-val="↑">↑ TOUT DROIT</button><button class="nb-btn cat-dir" data-val="↩DC">↩ DEMI-TOUR</button>
+        </div></div>
+      <div class="nb-section"><div class="nb-section-title">⚙️ Rapport</div>
+        <div class="nb-grid nb-grid-5">
+          <button class="nb-btn cat-rap" data-val="1">1</button><button class="nb-btn cat-rap" data-val="2">2</button><button class="nb-btn cat-rap" data-val="3">3</button><button class="nb-btn cat-rap" data-val="4">4</button><button class="nb-btn cat-rap" data-val="5">5</button>
+        </div></div>
+      <div class="nb-section"><div class="nb-section-title">📝 Qualificatif</div>
+        <div class="nb-grid nb-grid-3">
+          <button class="nb-btn cat-qual" data-val="AF">AF</button><button class="nb-btn cat-qual" data-val="Serré">Serré</button><button class="nb-btn cat-qual" data-val="Corde">Corde</button>
+          <button class="nb-btn cat-qual" data-val="Pas corde">Pas corde</button><button class="nb-btn cat-qual" data-val="Équerre">Équerre</button><button class="nb-btn cat-qual" data-val="Épingle">Épingle</button>
+          <button class="nb-btn cat-qual" data-val="Long">Long</button><button class="nb-btn cat-qual" data-val="Court">Court</button><button class="nb-btn cat-qual" data-val="Ouvert">Ouvert</button>
+          <button class="nb-btn cat-qual" data-val="Resserré">Resserré</button><button class="nb-btn cat-qual" data-val="Double">Double</button><button class="nb-btn cat-qual" data-val="Glissant">Glissant</button>
+        </div></div>
+      <div class="nb-section"><div class="nb-section-title">⛰️ Topographie</div>
+        <div class="nb-grid nb-grid-3">
+          <button class="nb-btn cat-qual" data-val="Montée">Montée</button><button class="nb-btn cat-qual" data-val="Descente">Descente</button><button class="nb-btn cat-qual" data-val="Plat">Plat</button>
+          <button class="nb-btn cat-qual" data-val="Crête">Crête</button><button class="nb-btn cat-qual" data-val="Intérieur">Intérieur</button><button class="nb-btn cat-qual" data-val="Extérieur">Extérieur</button>
+        </div></div>
+      <div class="nb-section"><div class="nb-section-title">🔗 Transitions</div>
+        <div class="nb-grid nb-grid-3">
+          <button class="nb-btn cat-vit" data-val="pour">pour</button><button class="nb-btn cat-vit" data-val="sur">sur</button><button class="nb-btn cat-vit" data-val="et">et</button>
+          <button class="nb-btn cat-vit" data-val="puis">puis</button><button class="nb-btn cat-vit" data-val="avant">avant</button><button class="nb-btn cat-vit" data-val="après">après</button>
+        </div></div>
+      <div class="nb-section"><div class="nb-section-title">⚠️ Alertes</div>
+        <div class="nb-grid nb-grid-3">
+          <button class="nb-btn cat-flag" data-val="Attention">Attention</button><button class="nb-btn cat-flag" data-val="Prudence">Prudence</button><button class="nb-btn cat-flag" data-val="🚨DANGER">🚨 DANGER</button>
+          <button class="nb-btn cat-flag" data-val="🛑STOP">🛑 STOP</button><button class="nb-btn cat-flag" data-val="💧Aqua">💧 Aqua</button><button class="nb-btn cat-flag" data-val="🟤Boue">🟤 Boue</button>
+        </div></div>
+      <div class="nb-section"><div class="nb-section-title">✏️ Note libre</div>
+        <div style="padding:0 12px 7px;display:flex;gap:7px;">
+          <input id="nbFreeInput" placeholder="Texte libre..." maxlength="40" style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:13px;padding:7px 9px;border-radius:4px;outline:none;" onkeydown="if(event.key==='Enter'&&this.value.trim()){nbPushToken(this.value.trim(),'free');this.value='';}">
+          <button onclick="var v=document.getElementById('nbFreeInput').value.trim();if(v){nbPushToken(v,'free');document.getElementById('nbFreeInput').value='';}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;padding:7px 10px;border-radius:4px;cursor:pointer;">+</button>
+        </div></div>
+    </div>
+    <div class="nb-undo-bar"><button class="nb-undo-btn" onclick="nbUndo()">↩ Annuler la dernière note</button></div>
+  </div>
+  <div class="nb-course" id="nbPanelCourse" style="display:none">
+    <div class="nb-course-select">
+      <select class="nb-rb-select" id="nbRbSelect" onchange="nbLoadRb()"><option value="">— Choisir un road book —</option></select>
+      <button onclick="nbSaveRb()" style="background:var(--blue);color:#000;border:none;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;padding:6px 10px;border-radius:4px;cursor:pointer;white-space:nowrap;">💾</button>
+    </div>
+    <div class="nb-nav-options">
+      <div class="nb-nav-opt sel" id="nbNavManuel" onclick="nbSetNav('manuel')">👆 Manuel</div>
+      <div class="nb-nav-opt" id="nbNavAuto" onclick="nbSetNav('auto')">📡 Auto GPS</div>
+      <div style="display:flex;align-items:center;gap:5px;margin-left:auto;">
+        <span style="font-size:10px;color:var(--muted);">m</span>
+        <input type="number" id="nbAutoRadius" value="80" min="20" max="300" step="10" style="width:50px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;padding:3px 5px;border-radius:4px;outline:none;text-align:center;color-scheme:dark;">
+      </div>
+    </div>
+    <div class="nb-current-note" id="nbCourseDisplay">
+      <div class="nb-course-empty"><div class="nb-course-empty-icon">📖</div><div class="nb-course-empty-text">Sauvegardez vos notes et chargez-les ici</div></div>
+    </div>
+    <div class="nb-course-controls" id="nbCourseControls" style="display:none">
+      <button class="nb-ctrl-prev" onclick="nbPrev()">◀</button>
+      <button class="nb-ctrl-next" onclick="nbNext()">SUIVANT ▶</button>
+      <button class="nb-ctrl-restart" onclick="nbRestart()">↺</button>
+    </div>
+  </div>
+</div>
+<div class="nb-list-wrap" id="nbListWrap">
+  <div class="nb-list-header"><span class="nb-list-title">📖 <span id="nbListCount">0</span> note(s)</span><button class="nb-list-close" onclick="nbToggleList()">✕</button></div>
+  <div class="nb-list-actions"><button class="btn-sm export" onclick="nbExportTxt()">⬇ TXT</button><button class="btn-sm danger" onclick="nbClearAll()">🗑 Effacer</button></div>
+  <div class="nb-list-scroll" id="nbListScroll"></div>
+</div>
+
+<!-- ═══ PLANNING ═══ -->
+<div class="panel" id="panel-planning">
+<div class="pl-panel">
+  <div class="pl-config">
+    <div class="pl-config-title">📅 Planificateur de journée</div>
+    <div class="pl-row"><div class="pl-label">Sortie parc</div><input type="time" class="pl-input" id="plSortieParc" step="60"><span style="font-size:9px;color:var(--muted);white-space:nowrap;">parc fermé</span></div>
+    <div class="pl-row"><div class="pl-label">→ Assistance</div><input type="number" class="pl-input pl-input-sm" id="plRoutierAsst" value="10" min="0" max="120"><span style="font-size:9px;color:var(--muted);">min routier</span></div>
+    <div class="pl-row"><div class="pl-label">Assistance</div><input type="number" class="pl-input pl-input-sm" id="plAsst" value="30" min="1" max="180"><span style="font-size:9px;color:var(--muted);">min durée</span></div>
+    <div class="pl-row"><div class="pl-label">Nb spéciales</div><input type="number" class="pl-input pl-input-sm" id="plNbEs" value="3" min="1" max="20"><button onclick="plBuildEsList()" style="background:var(--orange);color:#000;border:none;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;padding:5px 10px;border-radius:4px;cursor:pointer;letter-spacing:1px;">CRÉER</button></div>
+  </div>
+  <div class="pl-es-list" id="plEsList"><div style="padding:24px;text-align:center;color:var(--muted);font-size:12px;">Configurez et cliquez CRÉER</div></div>
+  <div class="pl-timeline" id="plTimeline" style="display:none;"><div class="pl-tl-title">🕐 Planning calculé</div><div id="plTimelineRows"></div></div>
+  <div class="pl-current-es" id="plCurrentEs">
+    <div class="pl-current-es-label">⚡ Étape en cours</div>
+    <div class="pl-current-es-text" id="plCurrentEsText"></div>
+    <div class="pl-current-es-actions">
+      <button class="pl-current-btn" id="plBtnLoadCh" onclick="plLoadIntoCH()" style="background:var(--blue);color:#000;">→ Charger dans CH</button>
+      <button class="pl-current-btn" onclick="plNextStep()" style="background:var(--surface2);color:var(--muted);border:1px solid var(--border);">Étape suivante ▶</button>
+    </div>
+  </div>
+  <div class="pl-actions">
+    <button class="pl-btn pl-btn-calc" onclick="plCalculate()">⚡ CALCULER</button>
+    <button class="pl-btn pl-btn-auto" onclick="plAutoLoad()">🔄 AUTO CH</button>
+    <button class="pl-btn pl-btn-clear" onclick="plClear()">↺</button>
+  </div>
+</div>
+</div>
+
+<!-- ═══ OVERLAY ASSISTANCE ═══ -->
+<div id="assistanceOverlay" style="display:none;position:fixed;inset:0;background:#000;z-index:9500;flex-direction:column;align-items:center;justify-content:center;padding:18px;touch-action:manipulation;">
+  <button onclick="closeAssistanceFullscreen()" style="position:absolute;top:10px;right:14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:18px;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+  <div id="asNom" style="font-family:'Rajdhani',sans-serif;font-size:clamp(18px,5vw,28px);font-weight:700;letter-spacing:4px;text-transform:uppercase;color:#aaa;margin-bottom:14px;text-align:center;"></div>
+  <div id="asHorloge" style="font-family:'Share Tech Mono',monospace;font-size:clamp(44px,13vw,88px);color:#fff;letter-spacing:4px;line-height:1;margin-bottom:18px;"></div>
+  <div style="text-align:center;margin-bottom:20px;">
+    <div style="font-size:10px;letter-spacing:4px;color:#555;text-transform:uppercase;margin-bottom:5px;">Temps restant</div>
+    <div id="asCountdown" style="font-family:'Share Tech Mono',monospace;font-size:clamp(68px,20vw,130px);line-height:1;letter-spacing:2px;color:#00aaff;transition:color 0.3s;">--:--</div>
+    <div id="asPhase" style="font-size:13px;letter-spacing:3px;color:#555;text-transform:uppercase;margin-top:5px;"></div>
+  </div>
+  <div style="width:1px;height:1px;background:rgba(255,255,255,0.1);margin-bottom:20px;"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;width:100%;max-width:480px;">
+    <div style="text-align:center;background:rgba(0,230,118,0.08);border:1px solid rgba(0,230,118,0.3);border-radius:9px;padding:14px;">
+      <div style="font-size:10px;letter-spacing:3px;color:#00e676;text-transform:uppercase;margin-bottom:7px;">🟢 Entrée parc</div>
+      <div id="asEntree" style="font-family:'Share Tech Mono',monospace;font-size:clamp(26px,7vw,44px);color:#00e676;line-height:1;">--:--</div>
+      <div id="asEntreeCountdown" style="font-size:12px;color:#555;margin-top:5px;font-family:'Share Tech Mono',monospace;"></div>
+    </div>
+    <div style="text-align:center;background:rgba(232,0,29,0.08);border:1px solid rgba(232,0,29,0.3);border-radius:9px;padding:14px;">
+      <div style="font-size:10px;letter-spacing:3px;color:#e8001d;text-transform:uppercase;margin-bottom:7px;">🔴 Sortie parc</div>
+      <div id="asSortie" style="font-family:'Share Tech Mono',monospace;font-size:clamp(26px,7vw,44px);color:#e8001d;line-height:1;">--:--</div>
+      <div id="asSortieCountdown" style="font-size:12px;color:#555;margin-top:5px;font-family:'Share Tech Mono',monospace;"></div>
+    </div>
+  </div>
+  <div style="width:90%;max-width:480px;height:5px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:20px;overflow:hidden;">
+    <div id="asProgressBar" style="height:100%;background:#00aaff;border-radius:3px;width:0%;transition:width 0.8s linear,background 0.3s;"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ─── UTILS ───
+function pad(n){return String(n).padStart(2,'0');}
+function fmt(ms){var h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000),s=Math.floor((ms%60000)/1000);return(h>0?pad(h)+':':'')+pad(m)+':'+pad(s);}
+function fmtMs(ms){return'.'+String(Math.floor(ms%1000)).padStart(3,'0');}
+function fmtHHMMSS(ts){var d=new Date(ts);return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());}
+function fmtDelta(ms){var sign=ms<0?'−':'+',abs=Math.abs(ms),m=Math.floor(abs/60000),s=Math.floor((abs%60000)/1000),d=Math.floor((abs%1000)/100);return sign+(m>0?m+':':'')+pad(s)+'.'+d;}
+var toastTimer=null;
+function showToast(msg,cls){cls=cls||'';var t=document.getElementById('toast');t.textContent=msg;t.className='toast '+cls+' show';if(toastTimer)clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.className='toast '+cls;},3500);}
+
+// ─── HORLOGE ───
+setInterval(function(){var n=new Date();var s=pad(n.getHours())+':'+pad(n.getMinutes())+':'+pad(n.getSeconds());document.getElementById('clockNow').textContent=s;document.getElementById('cdNow').textContent=s;},500);
+
+// ─── TABS ───
+function switchTab(name){
+  var tabs=['chrono','temps','pointage','delta','route','notes','planning','telem'];
+  document.querySelectorAll('.tab').forEach(function(t,i){t.classList.toggle('active',tabs[i]===name);});
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.toggle('active',p.id==='panel-'+name);});
+  if(name==='delta'){populateRefSelect();renderDelta();}
+  if(name!=='delta')hideDeltaCountdown();
+  if(name==='route'){setTimeout(function(){rbInit();if(rbMap)rbMap.invalidateSize();},100);}
+  if(name==='notes')nbInit();
+  if(name==='planning'&&plTimeline.length)plRenderTimeline();
+  if(name==='telem'){tlInit();tlRenderSessionList();}
+}
+
+// ─── CHRONO ───
+var startTime=null,elapsed=0,timerRef=null,isRunning=false,splits=[],times=[];
+function loadData(){try{var s=localStorage.getItem('cr_times');if(s)times=JSON.parse(s);}catch(e){times=[];}renderList();}
+function saveData(){localStorage.setItem('cr_times',JSON.stringify(times));}
+function fmtChrono(ms){var h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000),s=Math.floor((ms%60000)/1000);return(h>0?pad(h)+':':'')+pad(m)+':'+pad(s);}
+function tickChrono(){elapsed=Date.now()-startTime;document.getElementById('chronoDisplay').textContent=fmtChrono(elapsed);document.getElementById('chronoMs').textContent=fmtMs(elapsed);updateChronoDelta();if(document.getElementById('panel-delta').classList.contains('active'))renderDelta();}
+function startChrono(){if(isRunning)return;if(cdArmed)cancelCD();startTime=Date.now()-elapsed;timerRef=setInterval(tickChrono,50);isRunning=true;document.getElementById('btnStart').style.display='none';document.getElementById('controlsRace').style.display='grid';document.getElementById('btnLap').disabled=false;document.getElementById('btnSave').disabled=false;document.getElementById('chronoDisplay').className='chrono-display running';document.getElementById('statusDot').className='status-dot running';document.getElementById('statusText').textContent='EN COURSE';document.getElementById('autostartBadge').style.display='none';}
+function stopChrono(){if(!isRunning)return;clearInterval(timerRef);elapsed=Date.now()-startTime;isRunning=false;document.getElementById('controlsRace').style.display='none';document.getElementById('btnStart').style.display='block';document.getElementById('btnStart').textContent='▶ REPRENDRE';document.getElementById('btnLap').disabled=true;document.getElementById('chronoDisplay').className='chrono-display paused';document.getElementById('statusDot').className='status-dot';document.getElementById('statusText').textContent='EN PAUSE';if(videoActive)videoStop(30000);}
+function resetChrono(){clearInterval(timerRef);elapsed=0;splits=[];isRunning=false;document.getElementById('chronoDisplay').textContent='00:00';document.getElementById('chronoMs').textContent='.000';document.getElementById('controlsRace').style.display='none';document.getElementById('btnStart').style.display='block';document.getElementById('btnStart').textContent='▶ DÉPART';document.getElementById('btnLap').disabled=true;document.getElementById('btnSave').disabled=true;document.getElementById('chronoDisplay').className='chrono-display';document.getElementById('statusDot').className='status-dot';document.getElementById('statusText').textContent='EN ATTENTE';document.getElementById('splitsSection').style.display='none';document.getElementById('splitsRow').innerHTML='';document.getElementById('autostartBadge').style.display='none';document.getElementById('chronoDeltaBar').style.display='none';if(videoActive)videoDoStop();renderDelta();}
+var splitReturnTimer=null;
+function saveSplit(){var real=Date.now()-startTime;splits.push(real);var chip=document.createElement('div');chip.className='split-chip';chip.textContent='S'+splits.length+': '+fmt(real)+fmtMs(real);document.getElementById('splitsRow').appendChild(chip);document.getElementById('splitsSection').style.display='block';renderDelta();if(splitReturnTimer)clearTimeout(splitReturnTimer);populateRefSelect();switchTab('delta');startDeltaCountdown(10);splitReturnTimer=setTimeout(function(){switchTab('chrono');hideDeltaCountdown();},10000);}
+function saveTime(){var ms=isRunning?Date.now()-startTime:elapsed;var session=document.getElementById('sessionInput').value.trim()||'Sans nom';var note=session+' — '+new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});times.unshift({id:Date.now(),ms:ms,display:fmt(ms)+fmtMs(ms),note:note,session:session,splits:splits.slice()});saveData();renderList();resetChrono();showToast('✔ Temps enregistré','tgreen');var tabs=document.querySelectorAll('.tab');if(tabs[1])tabs[1].textContent=times.length>0?'📋 ('+times.length+')':'📋 Temps';if(videoActive)videoStop(30000);}
+function deleteTime(id){times=times.filter(function(t){return t.id!==id;});saveData();renderList();}
+function clearAll(){if(!confirm('Effacer tous les temps ?'))return;times=[];saveData();renderList();}
+function renderList(){var list=document.getElementById('timesList'),empty=document.getElementById('emptyState');document.getElementById('timesCount').textContent=times.length;var tabs=document.querySelectorAll('.tab');if(tabs[1])tabs[1].textContent=times.length>0?'📋 ('+times.length+')':'📋 Temps';if(!times.length){list.innerHTML='';empty.style.display='block';return;}empty.style.display='none';var best=Math.min.apply(null,times.map(function(t){return t.ms;}));list.innerHTML=times.map(function(t,i){var sh='';if(t.splits&&t.splits.length)sh='<div class="time-note">'+t.splits.map(function(s,j){return'S'+(j+1)+':'+fmt(s)+fmtMs(s);}).join(' · ')+'</div>';return'<li class="time-item"><div class="time-num">'+pad(times.length-i)+'</div><div><div class="time-value">'+t.display+'</div><div class="time-note">'+t.note+'</div>'+sh+'</div><span class="time-badge '+(t.ms===best?'badge-best':'badge-saved')+'">'+(t.ms===best?'BEST':'TEMPS')+'</span><button class="time-del" onclick="deleteTime('+t.id+')">×</button></li>';}).join('');}
+function exportCSV(){if(!times.length){alert('Aucun temps.');return;}var rows=['N°;Spéciale;Temps;Ms;Date'];times.forEach(function(t,i){rows.push((i+1)+';'+t.session+';'+fmt(t.ms)+';'+t.ms+';'+t.note);});dl('chrono_rallye.csv',rows.join('\n'),'text/csv');}
+function exportTXT(){if(!times.length){alert('Aucun temps.');return;}var lines=['=== CHRONO RALLYE ===',''];times.forEach(function(t,i){lines.push('#'+pad(i+1)+' | '+t.display+' | '+t.note);if(t.splits&&t.splits.length)lines.push('   Splits: '+t.splits.map(function(s,j){return'S'+(j+1)+'='+fmt(s)+fmtMs(s);}).join(' | '));});dl('chrono_rallye.txt',lines.join('\n'),'text/plain');}
+function dl(fn,content,type){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type:type}));a.download=fn;a.click();}
+document.getElementById('sessionInput').addEventListener('input',function(){});
+
+// ─── COMPARAISON TEMPS ───
+var tpTab='liste';
+function tpSetTab(t){tpTab=t;document.getElementById('tpTabListe').className='tab'+(t==='liste'?' active':'');document.getElementById('tpTabComp').className='tab'+(t==='comp'?' active':'');document.getElementById('tpPanelListe').style.display=t==='liste'?'flex':'none';document.getElementById('tpPanelComp').style.display=t==='comp'?'flex':'none';if(t==='comp')tpBuildSelect();}
+function tpBuildSelect(){var wrap=document.getElementById('tpCompSelect');if(!times.length){wrap.innerHTML='<div style="color:var(--muted);font-size:12px;padding:3px 0;">Aucun temps.</div>';return;}wrap.innerHTML=times.map(function(t){return'<label class="tp-check-row"><input type="checkbox" class="tp-cb" value="'+t.id+'" checked><span class="tp-check-label">'+t.session+'</span><span class="tp-check-time">'+t.display+'</span></label>';}).join('');}
+function tpSelAll(){document.querySelectorAll('.tp-cb').forEach(function(cb){cb.checked=true;});}
+function tpSelNone(){document.querySelectorAll('.tp-cb').forEach(function(cb){cb.checked=false;});}
+function tpRenderComp(){var sel=[];document.querySelectorAll('.tp-cb:checked').forEach(function(cb){var id=parseInt(cb.value);var t=times.find(function(x){return x.id===id;});if(t)sel.push(t);});var result=document.getElementById('tpCompResult'),empty=document.getElementById('tpCompEmpty');if(sel.length<2){result.innerHTML='';empty.style.display='block';return;}empty.style.display='none';var sorted=sel.slice().sort(function(a,b){return a.ms-b.ms;});var bestMs=sorted[0].ms;var html='<table class="tp-comp-table"><thead><tr><th>#</th><th>Spéciale</th><th>Temps</th><th>Écart</th></tr></thead><tbody>';sorted.forEach(function(t,i){var isBest=t.ms===bestMs;var abs=t.ms-bestMs;var m=Math.floor(abs/60000),s=Math.floor((abs%60000)/1000),d=Math.floor((abs%1000)/100);var ds=isBest?'—':'+'+(m>0?m+':'+pad(s):s)+'.'+d+'s';html+='<tr class="tp-comp-row'+(isBest?' best-row':'')+'"><td class="tp-rank">'+(i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.')+'</td><td><div class="tp-session">'+t.session+(isBest?'<span class="tp-best-badge">BEST</span>':'')+'</div><div class="tp-session-date">'+t.note.split('—')[1]+'</div></td><td><div class="tp-time-val">'+t.display+'</div></td><td class="tp-delta '+(isBest?'best':'behind')+'">'+ds+'</td></tr>';});html+='</tbody></table>';result.innerHTML=html;}
+
+// ─── COMPTE À REBOURS ───
+var cdArmed=false,cdIntervalRef=null,cdEndTs=null,cdTotalMs=null,cdAlerteSec=120000;
+var cdAudioCtx=null,cdAlertsFired={};
+var CD_ALERT_THRESHOLDS=[{sec:300,vib:[200],beeps:1,label:'5 min'},{sec:240,vib:[200],beeps:1,label:'4 min'},{sec:180,vib:[200],beeps:1,label:'3 min'},{sec:120,vib:[200],beeps:1,label:'2 min'},{sec:60,vib:[300],beeps:2,label:'1 min'},{sec:30,vib:[200,100,200],beeps:3,label:'30 s'},{sec:20,vib:[200,100,200],beeps:3,label:'20 s'},{sec:10,vib:[300,100,300,100,300],beeps:5,label:'10 s'}];
+function cdGetAudioCtx(){if(!cdAudioCtx){try{cdAudioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}return cdAudioCtx;}
+function cdBeep(freq,dur,vol){var ctx=cdGetAudioCtx();if(!ctx)return;try{var osc=ctx.createOscillator(),gain=ctx.createGain();osc.connect(gain);gain.connect(ctx.destination);osc.type='sine';osc.frequency.value=freq||880;gain.gain.value=vol||0.6;osc.start(ctx.currentTime);osc.stop(ctx.currentTime+(dur||0.12));}catch(e){}}
+function cdVibrate(p){if(navigator.vibrate)navigator.vibrate(p);}
+function cdFireAlert(t){var key='a'+t.sec;if(cdAlertsFired[key])return;cdAlertsFired[key]=true;var freq=t.sec<=10?1200:t.sec<=30?1000:880;for(var i=0;i<t.beeps;i++){(function(idx){setTimeout(function(){cdBeep(freq,0.15,0.7);},idx*200);})(i);}cdVibrate(t.vib);showToast('⏰ '+t.label+' avant le CH !',t.sec<=30?'tred':'tyellow');}
+function cdResetAlerts(){cdAlertsFired={};}
+function updateAutoIndicator(){var on=document.getElementById('autoStartToggle').checked;var ind=document.getElementById('cdAutoIndicator');ind.style.display=on?'block':'none';ind.className='cd-auto-indicator'+(on?' on':'');}
+function armCD(){var minutes=parseFloat(document.getElementById('cdMinutes').value)||0;var alerte=parseFloat(document.getElementById('cdAlerte').value)||2;var startVal=document.getElementById('cdStartTime').value;if(minutes<=0){showToast('⚠ Entrez une durée valide','tred');return;}var baseTs;if(startVal){var parts=startVal.split(':');var h=parseInt(parts[0]||0),m=parseInt(parts[1]||0),s=parseInt(parts[2]||0);var now=new Date();var base=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,s,0);baseTs=base.getTime();}else{baseTs=Date.now();}var durationMs=Math.round(minutes*60*1000);cdEndTs=baseTs+durationMs;cdTotalMs=durationMs;cdAlerteSec=Math.round(alerte*60*1000);if(cdEndTs<=Date.now()){showToast('⚠ Heure d\'arrivée déjà passée !','tred');return;}cdArmed=true;cdResetAlerts();document.getElementById('cdArrival').textContent=fmtHHMMSS(cdEndTs);document.getElementById('btnArm').style.display='none';document.getElementById('btnCancel').style.display='block';var autoOn=document.getElementById('autoStartToggle').checked;var badge=document.getElementById('autostartBadge');if(autoOn){badge.textContent='🔄 Départ auto programmé';badge.className='autostart-badge active';badge.style.display='block';}if(cdIntervalRef)clearInterval(cdIntervalRef);cdIntervalRef=setInterval(tickCD,200);tickCD();var depart=startVal?'départ '+startVal.substring(0,5):'maintenant';showToast('🕐 CH à '+fmtHHMMSS(cdEndTs),'tblue');}
+function tickCD(){if(!cdArmed)return;var now=Date.now(),remaining=cdEndTs-now;var display=document.getElementById('cdDisplay'),sub=document.getElementById('cdSub'),phase=document.getElementById('cdPhase'),bar=document.getElementById('cdBarFill'),diodesWrap=document.getElementById('diodesWrap');var autoOn=document.getElementById('autoStartToggle').checked;var pct=Math.max(0,Math.min(100,(remaining/cdTotalMs)*100));bar.style.width=pct+'%';var secLeft=Math.ceil(Math.max(remaining,0)/1000);if(autoOn&&secLeft<=5&&remaining>0){diodesWrap.style.display='flex';for(var i=1;i<=5;i++){var d=document.getElementById('d'+i);d.className='diode'+(secLeft<=i?'on-'+i:'');}}else{diodesWrap.style.display='none';for(var j=1;j<=5;j++)document.getElementById('d'+j).className='diode';}if(videoIsEnabled()&&!videoActive&&remaining>0&&remaining<=30500&&remaining>29500)videoStart();var totalSec=Math.ceil(remaining/1000);CD_ALERT_THRESHOLDS.forEach(function(t){if(totalSec<=t.sec&&totalSec>t.sec-1)cdFireAlert(t);});if(remaining<=0){display.textContent='0:00';display.className='cd-display cd-done';sub.textContent='🏁 C\'EST L\'HEURE DU CH !';phase.textContent='🏁 Pointage maintenant !';phase.className='cd-phase p-done';bar.style.width='0%';bar.style.background='var(--green)';diodesWrap.style.display='none';if(autoOn&&!isRunning){switchTab('chrono');setTimeout(function(){startChrono();showToast('🚦 DÉPART SPÉCIALE AUTO !','tgreen');},300);}cancelCD();return;}var mm=Math.floor(totalSec/60),ss=totalSec%60;var timeStr=mm+':'+pad(ss);if(remaining>cdAlerteSec){display.textContent=timeStr;display.className='cd-display cd-go';sub.textContent='Prochain CH dans '+mm+' min '+pad(ss)+' s';phase.textContent='🔵 En route — '+timeStr;phase.className='cd-phase p-go';bar.style.background='var(--blue)';}else if(remaining>60000){display.textContent=timeStr;display.className='cd-display cd-warn';sub.textContent='⚠ Approche du CH !';phase.textContent='⚠ Zone d\'approche — '+timeStr;phase.className='cd-phase p-warn';bar.style.background='var(--yellow)';}else{display.textContent=timeStr;display.className='cd-display cd-danger';sub.textContent='🚨 MOINS D\'UNE MINUTE !';phase.textContent='🚨 Imminent — '+timeStr;phase.className='cd-phase p-danger';bar.style.background='var(--red)';}var badge=document.getElementById('autostartBadge');if(badge.style.display!=='none'&&autoOn)badge.textContent='🔄 Départ auto dans '+mm+':'+pad(ss);}
+function cancelCD(){cdArmed=false;if(cdIntervalRef){clearInterval(cdIntervalRef);cdIntervalRef=null;}document.getElementById('btnArm').style.display='block';document.getElementById('btnCancel').style.display='none';}
+function resetCD(){cancelCD();document.getElementById('cdDisplay').textContent='--:--';document.getElementById('cdDisplay').className='cd-display cd-go';document.getElementById('cdSub').textContent='Configurez la durée et lancez';document.getElementById('cdArrival').textContent='--:--:--';document.getElementById('cdBarFill').style.width='0%';document.getElementById('cdBarFill').style.background='var(--blue)';document.getElementById('cdPhase').textContent='⏳ En attente';document.getElementById('cdPhase').className='cd-phase p-wait';document.getElementById('autostartBadge').style.display='none';document.getElementById('diodesWrap').style.display='none';for(var i=1;i<=5;i++)document.getElementById('d'+i).className='diode';}
+
+// ─── DELTA SPLITS ───
+var refId=null;
+function populateRefSelect(){var sel=document.getElementById('refSelect');var cur=sel.value;sel.innerHTML='<option value="">— Choisir —</option>';times.forEach(function(t){var opt=document.createElement('option');opt.value=t.id;opt.textContent=t.session+' — '+t.display;sel.appendChild(opt);});if(cur&&times.find(function(t){return t.id==cur;}))sel.value=cur;else if(refId&&!times.find(function(t){return t.id===refId;}))refId=null;}
+function selectRef(){var val=document.getElementById('refSelect').value;refId=val?parseInt(val):null;updateRefInfo();renderDelta();}
+function clearRef(){refId=null;document.getElementById('refSelect').value='';updateRefInfo();renderDelta();}
+function updateRefInfo(){var info=document.getElementById('refInfo');if(!refId){info.style.display='none';return;}var ref=times.find(function(t){return t.id===refId;});if(!ref){info.style.display='none';return;}info.style.display='block';document.getElementById('refInfoName').textContent=ref.session;document.getElementById('refInfoDetail').textContent=ref.display+' · '+(ref.splits?ref.splits.length:0)+' split(s)';}
+function renderDelta(){var list=document.getElementById('deltaSplitsList'),empty=document.getElementById('deltaEmpty'),valEl=document.getElementById('deltaValue'),badgeEl=document.getElementById('deltaBadge');var ref=refId?times.find(function(t){return t.id===refId;}):null;var refSplits=ref&&ref.splits?ref.splits:[];var curMs=isRunning?(Date.now()-startTime):elapsed;var hasData=splits.length>0||(isRunning&&curMs>0);if(!hasData){list.innerHTML='';empty.style.display='block';valEl.textContent='—';valEl.className='delta-value';badgeEl.textContent='Aucun split';badgeEl.className='delta-badge';return;}empty.style.display='none';var rows=[];splits.forEach(function(ms,i){var refMs=refSplits[i]!==undefined?refSplits[i]:null;rows.push({idx:i+1,curMs:ms,refMs:refMs,delta:refMs!==null?ms-refMs:null,isLive:false});});if(isRunning){var ni=splits.length,refMs=refSplits[ni]!==undefined?refSplits[ni]:null;rows.push({idx:ni+1,curMs:curMs,refMs:refMs,delta:refMs!==null?curMs-refMs:null,isLive:true});}var lastDelta=null;for(var i=rows.length-1;i>=0;i--){if(rows[i].delta!==null){lastDelta=rows[i];break;}}if(lastDelta){var d=lastDelta.delta;var cls=d<-500?'ahead':d>500?'behind':'equal';valEl.textContent=fmtDelta(d);valEl.className='delta-value '+cls;badgeEl.textContent=cls==='ahead'?'▲ EN AVANCE':cls==='behind'?'▼ EN RETARD':'● DANS LES TEMPS';badgeEl.className='delta-badge '+cls;}else{valEl.textContent='—';valEl.className='delta-value';badgeEl.textContent=ref?'Aucun split de référence':'Choisir une référence';badgeEl.className='delta-badge';}list.innerHTML=rows.map(function(r){var rowCls=r.isLive?'current':r.delta===null?'':r.delta<-500?'ahead-row':r.delta>500?'behind-row':'';var dCls=r.delta===null?'pending':r.delta<-500?'ahead':r.delta>500?'behind':'equal';var dStr=r.delta!==null?fmtDelta(r.delta):'—';var refStr=r.refMs!==null?fmt(r.refMs)+fmtMs(r.refMs):'—';var curStr=fmt(r.curMs)+fmtMs(r.curMs);var ls=r.isLive?'<div class="ds-sub">● LIVE</div>':'';var rs=r.refMs!==null?'<div class="ds-ref-sub">S'+r.idx+' réf.</div>':'';return'<div class="delta-split-row '+rowCls+'"><div class="ds-num">S'+r.idx+'</div><div><div class="ds-cur">'+curStr+'</div>'+ls+'</div><div><div class="ds-ref">'+refStr+'</div>'+rs+'</div><div class="ds-delta '+dCls+'">'+dStr+'</div></div>';}).join('');}
+function updateChronoDelta(){var bar=document.getElementById('chronoDeltaBar'),valEl=document.getElementById('chronoDeltaVal'),refEl=document.getElementById('chronoDeltaRef'),idxEl=document.getElementById('chronoDeltaIdx'),statusEl=document.getElementById('chronoDeltaStatus');var ref=refId?times.find(function(t){return t.id===refId;}):null;var refSplits=ref&&ref.splits?ref.splits:[];var nextIdx=splits.length;var refMs=refSplits[nextIdx]!==undefined?refSplits[nextIdx]:null;var curMs=isRunning?(Date.now()-startTime):elapsed;if(!isRunning||!ref){bar.style.display='none';return;}bar.style.display='block';idxEl.textContent=nextIdx+1;if(refMs===null){valEl.textContent='—';valEl.style.color='var(--muted)';refEl.textContent='—';statusEl.textContent='Pas de split de référence';statusEl.style.color='var(--muted)';return;}var delta=curMs-refMs;var dStr=fmtDelta(delta);var cls=delta<-500?'ahead':delta>500?'behind':'equal';var colors={ahead:'var(--green)',behind:'var(--red)',equal:'var(--yellow)'};var labels={ahead:'▲ EN AVANCE',behind:'▼ EN RETARD',equal:'● DANS LES TEMPS'};valEl.textContent=dStr;valEl.style.color=colors[cls];refEl.textContent=fmt(refMs)+fmtMs(refMs);statusEl.textContent=labels[cls];statusEl.style.color=colors[cls];}
+var splitReturnTimerDC=null;
+function startDeltaCountdown(sec){var bar=document.getElementById('deltaReturnBar'),label=document.getElementById('deltaReturnLabel');if(!bar)return;bar.style.transition='none';bar.style.width='100%';label.textContent='Retour Chrono dans '+sec+'s';setTimeout(function(){bar.style.transition='width '+sec+'s linear';bar.style.width='0%';},30);var remaining=sec;if(window._dcTimer)clearInterval(window._dcTimer);window._dcTimer=setInterval(function(){remaining--;if(remaining<=0){clearInterval(window._dcTimer);return;}label.textContent='Retour Chrono dans '+remaining+'s';},1000);document.getElementById('deltaReturnBanner').style.display='flex';}
+function hideDeltaCountdown(){if(window._dcTimer)clearInterval(window._dcTimer);var banner=document.getElementById('deltaReturnBanner');if(banner)banner.style.display='none';}
+function cancelSplitReturn(){if(splitReturnTimer){clearTimeout(splitReturnTimer);splitReturnTimer=null;}hideDeltaCountdown();}
+
+// ─── CAPTEUR GESTE ───
+var gestureActive=false,gestureStream=null,gestureRafId=null,gesturePrevLum=null,gestureSensThreshold=35,gestureCooldown=false,gestureCooldownMs=1200;
+function gestureUpdateSens(){gestureSensThreshold=parseInt(document.getElementById('gestureSens').value)||35;document.getElementById('gestureSensVal').textContent=gestureSensThreshold;}
+async function toggleGesture(){if(gestureActive)gestureStop();else await gestureStart();}
+async function gestureStart(){if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){showToast('⚠ Caméra non disponible','tred');return;}try{gestureStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:64},height:{ideal:64}}});var video=document.getElementById('gestureVideo');video.srcObject=gestureStream;await video.play();gestureActive=true;gestureUpdateBtn();gesturePrevLum=null;gestureRafId=requestAnimationFrame(gestureAnalyze);showToast('👋 Capteur geste activé','tgreen');}catch(e){showToast('⚠ Caméra refusée : '+e.message,'tred');}}
+function gestureStop(){gestureActive=false;if(gestureRafId){cancelAnimationFrame(gestureRafId);gestureRafId=null;}if(gestureStream){gestureStream.getTracks().forEach(function(t){t.stop();});gestureStream=null;}gestureUpdateBtn();document.getElementById('gestureLumFill').style.width='0%';document.getElementById('gestureLumVal').textContent='—';}
+function gestureAnalyze(){if(!gestureActive)return;var video=document.getElementById('gestureVideo'),canvas=document.getElementById('gestureCanvas'),ctx=canvas.getContext('2d');if(video.readyState>=2){ctx.drawImage(video,0,0,64,64);var pixels=ctx.getImageData(0,0,64,64).data;var total=0,count=pixels.length/4;for(var i=0;i<pixels.length;i+=4)total+=(pixels[i]*0.299+pixels[i+1]*0.587+pixels[i+2]*0.114);var lum=Math.round(total/count),lumPct=Math.round(lum/255*100);var fill=document.getElementById('gestureLumFill'),val=document.getElementById('gestureLumVal');if(fill){fill.style.width=lumPct+'%';fill.style.background=lumPct<20?'var(--red)':lumPct<50?'var(--orange)':'var(--green)';}if(val)val.textContent=lumPct+'%';if(gesturePrevLum!==null&&!gestureCooldown&&gesturePrevLum-lumPct>=gestureSensThreshold)gestureFireSplit();gesturePrevLum=lumPct;}gestureRafId=setTimeout(function(){gestureRafId=requestAnimationFrame(gestureAnalyze);},80);}
+function gestureFireSplit(){if(gestureCooldown)return;gestureCooldown=true;if(isRunning){saveSplit();var btn=document.getElementById('btnLap');if(btn){btn.style.background='var(--green)';setTimeout(function(){btn.style.background='';},300);}}else if(!isRunning&&elapsed===0)startChrono();setTimeout(function(){gestureCooldown=false;},gestureCooldownMs);}
+function gestureUpdateBtn(){var btn=document.getElementById('gestureBtn');if(!btn)return;if(gestureActive){btn.innerHTML='👋 GESTE : ON';btn.style.borderColor='var(--green)';btn.style.color='var(--green)';btn.style.background='#001a0d';}else{btn.innerHTML='👋 GESTE : OFF';btn.style.borderColor='var(--border)';btn.style.color='var(--muted)';btn.style.background='var(--surface)';}}
+document.addEventListener('keydown',function(e){if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;var handled=false;if(e.code==='Enter'||e.code==='Space'||e.code==='VolumeUp'||e.key==='MediaPlayPause'){if(isRunning){saveSplit();handled=true;}else if(elapsed===0){startChrono();handled=true;}}if(e.code==='VolumeDown'||e.key==='ArrowRight'){if(isRunning){stopChrono();handled=true;}else if(elapsed>0){startChrono();handled=true;}}if(handled)e.preventDefault();});
+if('mediaSession' in navigator){try{navigator.mediaSession.setActionHandler('play',function(){if(!isRunning)startChrono();});navigator.mediaSession.setActionHandler('pause',function(){if(isRunning)stopChrono();});navigator.mediaSession.setActionHandler('nexttrack',function(){if(isRunning)saveSplit();});}catch(e){}}
+document.addEventListener('visibilitychange',function(){if(document.hidden&&gestureActive)gestureStop();});
+
+// ─── VIDÉO SELFIE ───
+var videoStream=null,videoRecorder=null,videoChunks=[],videoActive=false,videoStopTimer=null,videoRecStart=null,videoTimerInterval=null;
+function videoIsEnabled(){var tog=document.getElementById('videoAutoToggle');return tog&&tog.checked;}
+async function videoStart(){if(videoActive)return;if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return;try{videoStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:true});var preview=document.getElementById('videoPreview');preview.srcObject=videoStream;await preview.play();document.getElementById('videoPreviewWrap').style.display='block';var mimeType='video/webm;codecs=vp9';if(!MediaRecorder.isTypeSupported(mimeType))mimeType='video/webm';if(!MediaRecorder.isTypeSupported(mimeType))mimeType='video/mp4';videoChunks=[];videoRecorder=new MediaRecorder(videoStream,{mimeType:mimeType});videoRecorder.ondataavailable=function(e){if(e.data.size>0)videoChunks.push(e.data);};videoRecorder.onstop=function(){videoSave();};videoRecorder.start(1000);videoActive=true;videoRecStart=Date.now();videoTimerInterval=setInterval(function(){var el=document.getElementById('videoRecTimer');if(el&&videoRecStart){var s=Math.floor((Date.now()-videoRecStart)/1000),m=Math.floor(s/60);s=s%60;el.textContent=(m>0?m+':':'')+pad(s);}},500);var ind=document.getElementById('cdVideoIndicator');if(ind)ind.style.display='block';showToast('📹 Enregistrement démarré','tred');}catch(e){showToast('⚠ Caméra vidéo : '+e.message,'tred');}}
+function videoStop(delayMs){if(videoStopTimer)clearTimeout(videoStopTimer);var delay=delayMs||0;videoStopTimer=setTimeout(function(){videoDoStop();},delay);if(delay>0)showToast('📹 Arrêt vidéo dans '+(delay/1000)+'s','tyellow');}
+function videoDoStop(){if(!videoActive)return;videoActive=false;if(videoTimerInterval){clearInterval(videoTimerInterval);videoTimerInterval=null;}if(videoRecorder&&videoRecorder.state!=='inactive')videoRecorder.stop();if(videoStream){videoStream.getTracks().forEach(function(t){t.stop();});videoStream=null;}document.getElementById('videoPreviewWrap').style.display='none';var ind=document.getElementById('cdVideoIndicator');if(ind)ind.style.display='none';}
+function videoSave(){if(!videoChunks.length)return;var mimeType=videoRecorder&&videoRecorder.mimeType||'video/webm';var ext=mimeType.indexOf('mp4')>=0?'mp4':'webm';var blob=new Blob(videoChunks,{type:mimeType});var url=URL.createObjectURL(blob);var now=new Date();var fname='rallye_'+now.getFullYear()+pad(now.getMonth()+1)+pad(now.getDate())+'_'+pad(now.getHours())+pad(now.getMinutes())+'.'+ext;var a=document.createElement('a');a.href=url;a.download=fname;a.click();setTimeout(function(){URL.revokeObjectURL(url);},5000);showToast('📹 Vidéo : '+fname,'tgreen');videoChunks=[];}
+
+// ─── WAKE LOCK ───
+var wakeLock=null,wakeLockActive=false;
+async function toggleWakeLock(){if(wakeLockActive){if(wakeLock){try{await wakeLock.release();}catch(e){}wakeLock=null;}wakeLockActive=false;updateWakeLockBtn();showToast('💤 Veille réactivée','tyellow');}else{if(!('wakeLock' in navigator)){showToast('⚠ Wake Lock non supporté','tred');return;}try{wakeLock=await navigator.wakeLock.request('screen');wakeLockActive=true;updateWakeLockBtn();showToast('🔆 Écran toujours allumé','tgreen');wakeLock.addEventListener('release',function(){wakeLockActive=false;updateWakeLockBtn();});}catch(e){showToast('⚠ Impossible : '+e.message,'tred');}}}
+document.addEventListener('visibilitychange',async function(){if(wakeLockActive&&document.visibilityState==='visible'){try{wakeLock=await navigator.wakeLock.request('screen');}catch(e){}}});
+function updateWakeLockBtn(){var btn=document.getElementById('wakeLockBtn');if(!btn)return;if(wakeLockActive){btn.textContent='🔆';btn.style.borderColor='var(--green)';btn.style.color='var(--green)';btn.style.background='#001a0d';}else{btn.textContent='💤';btn.style.borderColor='var(--border)';btn.style.color='var(--muted)';btn.style.background='var(--surface2)';}}
+
+// ─── ROUTE ───
+var rbMap=null,rbMode='reco',rbRecording=false,rbWatchId=null,rbTrackPoints=[],rbNotePoints=[],rbPolyline=null,rbGpsMarker=null,rbLoadedPolyline=null,rbLastPos=null,rbRoutes=[],rbFollowGps=true,rbTrip=[0,0,0],rbLastPosForTrip=null;
+function rbInit(){if(rbMap)return;rbMap=L.map('rb-map',{center:[45.5,6.0],zoom:14,zoomControl:true,attributionControl:true});L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'© CARTO © OSM',subdomains:'abcd',maxZoom:19}).addTo(rbMap);rbPolyline=L.polyline([],{color:'#e8001d',weight:5,opacity:0.9}).addTo(rbMap);rbLoadRoutes();rbStartGps();rbMap.on('dragstart',function(){rbFollowGps=false;var btn=document.getElementById('rbBtnCenter');if(btn){btn.textContent='◎ GPS';btn.style.color='var(--blue)';btn.style.borderColor='var(--blue)';}});}
+function rbStartGps(){if(!navigator.geolocation){rbSetGpsStatus('⚠ GPS indisponible');return;}rbWatchId=navigator.geolocation.watchPosition(function(pos){rbOnGps(pos);},function(err){var msgs={1:'Accès refusé',2:'Signal indisponible',3:'Délai dépassé'};rbSetGpsStatus('⚠ '+(msgs[err.code]||'Erreur GPS'));},{enableHighAccuracy:true,maximumAge:3000,timeout:15000});}
+function rbOnGps(pos){var lat=pos.coords.latitude,lng=pos.coords.longitude,spd=pos.coords.speed,acc=Math.round(pos.coords.accuracy);rbLastPos={lat:lat,lng:lng,acc:acc,ts:Date.now()};rbSetGpsStatus('📡 ±'+acc+'m');var kmh=spd!==null&&spd!==undefined?Math.round(spd*3.6):0;var speedEl=document.getElementById('rbSpeed'),cellEl=document.getElementById('rbCellSpeed');if(speedEl)speedEl.textContent=kmh;if(cellEl)cellEl.className='rb-inst-cell speed'+(kmh>120?' veryfast':kmh>80?' fast':'');if(rbLastPosForTrip){var d=rbHaversine(rbLastPosForTrip.lat,rbLastPosForTrip.lng,lat,lng);if(d<0.5){rbTrip[0]+=d;rbTrip[1]+=d;rbTrip[2]+=d;rbUpdateTrip();}}rbLastPosForTrip={lat:lat,lng:lng};if(!rbGpsMarker){var icon=L.divIcon({className:'',html:'<div style="width:18px;height:18px;border-radius:50%;background:#00aaff;border:3px solid #fff;box-shadow:0 0 0 3px rgba(0,170,255,0.3),0 2px 8px rgba(0,0,0,0.4)"></div>',iconSize:[18,18],iconAnchor:[9,9]});rbGpsMarker=L.marker([lat,lng],{icon:icon,zIndexOffset:1000}).addTo(rbMap);rbMap.setView([lat,lng],16);}else{rbGpsMarker.setLatLng([lat,lng]);if(rbFollowGps)rbMap.setView([lat,lng],rbMap.getZoom(),{animate:true,duration:0.5});}if(rbRecording&&rbMode==='reco'){rbTrackPoints.push([lat,lng]);rbPolyline.setLatLngs(rbTrackPoints);document.getElementById('rbPtsCount').textContent=rbTrackPoints.length+' pt(s)';}if(rbMode==='rallye')rbCheckProximite(lat,lng);}
+function rbHaversine(lat1,lng1,lat2,lng2){var R=6371,dLat=(lat2-lat1)*Math.PI/180,dLng=(lng2-lng1)*Math.PI/180,a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
+function rbUpdateTrip(){var e1=document.getElementById('rbTrip1'),e2=document.getElementById('rbTrip2'),eT=document.getElementById('rbTripTotal');if(e1)e1.textContent=rbTrip[1].toFixed(2);if(e2)e2.textContent=rbTrip[2].toFixed(2);if(eT)eT.textContent=rbTrip[0].toFixed(2);}
+function rbResetTrip(which){if(which===0){rbTrip=[0,0,0];rbLastPosForTrip=null;}else if(which===1)rbTrip[1]=0;else if(which===2)rbTrip[2]=0;rbUpdateTrip();showToast(which===0?'↺ Tout remis à zéro':'↺ Trip '+which+' RAZ','tyellow');}
+function rbSetGpsStatus(txt){document.getElementById('rbGpsStatus').textContent=txt;}
+function rbCenterGps(){rbFollowGps=!rbFollowGps;var btn=document.getElementById('rbBtnCenter');if(rbFollowGps){if(btn){btn.textContent='◎ ON';btn.style.color='var(--green)';btn.style.borderColor='var(--green)';}if(rbLastPos)rbMap.setView([rbLastPos.lat,rbLastPos.lng],16,{animate:true});showToast('📡 Suivi GPS activé','tgreen');}else{if(btn){btn.textContent='◎ GPS';btn.style.color='var(--blue)';btn.style.borderColor='var(--blue)';}showToast('Suivi désactivé','tyellow');}}
+function rbSetMode(m){rbMode=m;document.getElementById('rbBtnReco').className='rb-mode-btn'+(m==='reco'?' active-reco':'');document.getElementById('rbBtnRallye').className='rb-mode-btn'+(m==='rallye'?' active-rallye':'');document.getElementById('rbBottomReco').style.display=m==='reco'?'flex':'none';document.getElementById('rbBottomRallye').style.display=m==='rallye'?'flex':'none';document.getElementById('rbRoutesPanel').classList.remove('open');setTimeout(function(){if(rbMap)rbMap.invalidateSize();},200);}
+function rbToggleRecord(){rbRecording=!rbRecording;var btn=document.getElementById('rbBtnRecord');if(rbRecording){btn.textContent='⏹ STOP';btn.className='rb-btn rb-btn-rec recording';showToast('⏺ Enregistrement...','tred');}else{btn.textContent='⏺ REC';btn.className='rb-btn rb-btn-rec';showToast('Pause enreg. ('+rbTrackPoints.length+' pts)','tyellow');}}
+function rbClearTrack(){if(!confirm('Effacer le tracé ?'))return;rbTrackPoints=[];rbNotePoints=[];rbPolyline.setLatLngs([]);rbMap.eachLayer(function(l){if(l._rbNote)rbMap.removeLayer(l);});document.getElementById('rbPtsCount').textContent='0 pt(s)';rbRecording=false;document.getElementById('rbBtnRecord').textContent='⏺ REC';document.getElementById('rbBtnRecord').className='rb-btn rb-btn-rec';}
+var rbPendingTag='';
+function rbOpenNote(){document.getElementById('rbNoteInput').value='';rbPendingTag='';document.getElementById('rbNoteOverlay').className='rb-note-overlay show';}
+function rbCloseNote(){document.getElementById('rbNoteOverlay').className='rb-note-overlay';}
+function rbSelectTag(tag){rbPendingTag=tag;document.getElementById('rbNoteInput').value=tag+' ';document.getElementById('rbNoteInput').focus();}
+function rbConfirmNote(){var txt=document.getElementById('rbNoteInput').value.trim()||'📍 Point';rbCloseNote();if(!rbLastPos){showToast('GPS nécessaire','tred');return;}rbAddNoteMarker(rbLastPos.lat,rbLastPos.lng,txt);rbNotePoints.push({lat:rbLastPos.lat,lng:rbLastPos.lng,note:txt,ts:Date.now()});showToast('📍 Note ajoutée','tblue');}
+function rbAddNoteMarker(lat,lng,txt){var isDanger=txt.indexOf('Danger')>=0||txt.indexOf('⚠')>=0;var isWarn=txt.indexOf('Virage')>=0||txt.indexOf('🔶')>=0;var col=isDanger?'#e8001d':isWarn?'#ffd600':'#00aaff';var icon=L.divIcon({className:'',html:'<div style="width:24px;height:24px;border-radius:50% 50% 50% 0;background:'+col+';border:2px solid #fff;transform:rotate(-45deg);box-shadow:0 2px 5px rgba(0,0,0,0.5)"></div>',iconSize:[24,24],iconAnchor:[12,24]});var m=L.marker([lat,lng],{icon:icon}).addTo(rbMap);m._rbNote=true;m.bindPopup('<div style="font-family:sans-serif;font-size:12px;color:#111;min-width:100px"><b>'+txt+'</b></div>');return m;}
+function rbSaveRoute(){if(rbTrackPoints.length<2){showToast('Tracé trop court !','tred');return;}var now=new Date();var defaultName='ES '+now.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+' '+now.getHours()+'h'+pad(now.getMinutes());var name=prompt('Nom du tracé :',defaultName);if(name===null)return;if(!name.trim())name=defaultName;var route={id:Date.now(),name:name.trim(),points:rbTrackPoints.slice(),notes:rbNotePoints.slice(),dist:rbCalcDist(rbTrackPoints),date:now.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})};rbRoutes.unshift(route);localStorage.setItem('rb_routes',JSON.stringify(rbRoutes));showToast('💾 "'+route.name+'" sauvegardé','tgreen');}
+function rbCalcDist(pts){var d=0;for(var i=1;i<pts.length;i++)d+=rbHaversine(pts[i-1][0],pts[i-1][1],pts[i][0],pts[i][1]);return d;}
+function rbLoadRoutes(){try{var s=localStorage.getItem('rb_routes');if(s)rbRoutes=JSON.parse(s);}catch(e){rbRoutes=[];}}
+function rbShowRoutes(){rbLoadRoutes();var items=document.getElementById('rbRoutesItems'),empty=document.getElementById('rbRoutesEmpty');document.getElementById('rbRoutesPanel').classList.add('open');if(!rbRoutes.length){items.innerHTML='';empty.style.display='block';return;}empty.style.display='none';items.innerHTML=rbRoutes.map(function(r){var km=r.dist?r.dist.toFixed(1)+' km':'—';return'<div class="rb-route-item" onclick="rbLoadRoute('+r.id+')"><div class="rb-route-dot"></div><div><div class="rb-route-name">'+r.name+'</div><div class="rb-route-detail">'+km+' · '+r.points.length+' pts · '+r.date+'</div></div><button class="rb-route-del" onclick="rbDeleteRoute(event,'+r.id+')">×</button></div>';}).join('');}
+function rbHideRoutes(){document.getElementById('rbRoutesPanel').classList.remove('open');}
+function rbLoadRoute(id){var route=rbRoutes.find(function(r){return r.id===id;});if(!route)return;rbHideRoutes();if(rbLoadedPolyline){rbMap.removeLayer(rbLoadedPolyline);rbLoadedPolyline=null;}rbMap.eachLayer(function(l){if(l._rbNote)rbMap.removeLayer(l);});rbLoadedPolyline=L.polyline(route.points,{color:'#ff6b00',weight:4,opacity:0.85}).addTo(rbMap);if(route.notes)route.notes.forEach(function(n){rbAddNoteMarker(n.lat,n.lng,n.note);});if(route.points.length>0)rbMap.fitBounds(rbLoadedPolyline.getBounds(),{padding:[20,20]});document.getElementById('rbPtsCount').textContent=route.points.length+' pts';showToast('📂 '+route.name+' chargé','tblue');}
+function rbDeleteRoute(e,id){e.stopPropagation();if(!confirm('Supprimer ?'))return;rbRoutes=rbRoutes.filter(function(r){return r.id!==id;});localStorage.setItem('rb_routes',JSON.stringify(rbRoutes));rbShowRoutes();}
+function rbCheckProximite(lat,lng){rbMap.eachLayer(function(l){if(!l._rbNote||!l.getLatLng)return;var ll=l.getLatLng();var d=rbMap.distance([lat,lng],[ll.lat,ll.lng]);if(d<150&&!l._alerted){l._alerted=true;var popup=l.getPopup();if(popup)showToast('📍 '+popup.getContent().replace(/<[^>]+>/g,''),'tyellow');setTimeout(function(){l._alerted=false;},30000);}});}
+
+// ─── NOTE OVERLAY ───
+// HTML inline dans le body pour la popup note route
+document.body.insertAdjacentHTML('beforeend','<div class="rb-note-overlay" id="rbNoteOverlay"><div class="rb-note-box"><div class="rb-note-title">📍 Ajouter une note</div><div class="rb-note-btns"><div class="rb-note-tag t-danger" onclick="rbSelectTag(\'⚠️ Danger\')">⚠️ Danger</div><div class="rb-note-tag t-warn" onclick="rbSelectTag(\'🔶 Virage\')">🔶 Virage</div><div class="rb-note-tag t-warn" onclick="rbSelectTag(\'⬆️ Crête\')">⬆️ Crête</div><div class="rb-note-tag t-info" onclick="rbSelectTag(\'🔀 Bifurc.\')">🔀 Bifurc.</div><div class="rb-note-tag t-info" onclick="rbSelectTag(\'🏁 Départ\')">🏁 Départ</div><div class="rb-note-tag t-info" onclick="rbSelectTag(\'🏁 Arrivée\')">🏁 Arrivée</div></div><input class="rb-note-input" id="rbNoteInput" placeholder="Note libre..." maxlength="60"><div class="rb-note-actions"><button class="rb-note-cancel" onclick="rbCloseNote()">Annuler</button><button class="rb-note-ok" onclick="rbConfirmNote()">✔ Ajouter</button></div></div></div>');
+
+// ─── NOTES ROAD BOOK ───
+var nbMode='prise',nbNotes=[],nbRoadBooks=[],nbCurIdx=0,nbNavMode='manuel',nbActiveRbId=null,nbGpsWatchId=null,nbTokens=[];
+var NB_TOKEN_COLORS={'cat-dist':'var(--blue)','cat-flag':'var(--red)','cat-dir':'var(--orange)','cat-rap':'var(--yellow)','cat-qual':'var(--green)','cat-vit':'#aa44ff','free':'var(--muted)'};
+function nbInit(){nbLoadRoadBooks();nbRenderList();nbPopulateRbSelect();}
+function nbSetMode(m){nbMode=m;document.getElementById('nbTabPrise').className='nb-modetab'+(m==='prise'?' active-prise':'');document.getElementById('nbTabCourse').className='nb-modetab'+(m==='course'?' active-course':'');document.getElementById('nbPanelPrise').style.display=m==='prise'?'flex':'none';document.getElementById('nbPanelCourse').style.display=m==='course'?'flex':'none';if(m==='course')nbPopulateRbSelect();}
+document.addEventListener('click',function(e){var btn=e.target.closest('.nb-btn[data-val]');if(!btn)return;var val=btn.getAttribute('data-val');if(!val)return;var cat='free';['cat-dist','cat-flag','cat-dir','cat-rap','cat-qual','cat-vit'].forEach(function(c){if(btn.classList.contains(c))cat=c;});nbPushToken(val,cat);});
+function nbPushToken(val,cat){cat=cat||'free';nbTokens.push({val:val,cat:cat});nbRenderTokens();}
+function nbBackspace(){if(!nbTokens.length)return;nbTokens.pop();nbRenderTokens();}
+function nbClearBuilder(){nbTokens=[];nbRenderTokens();}
+function nbRenderTokens(){var wrap=document.getElementById('nbTokens'),addBtn=document.getElementById('nbAddBtn');if(!nbTokens.length){wrap.innerHTML='<span style="color:var(--muted);font-size:11px;letter-spacing:1px;">— appuie sur un bouton —</span>';addBtn.disabled=true;return;}addBtn.disabled=false;wrap.innerHTML=nbTokens.map(function(t,i){var col=NB_TOKEN_COLORS[t.cat]||'var(--muted)';return'<span onclick="nbRemoveToken('+i+')" style="display:inline-flex;align-items:center;gap:3px;background:var(--surface2);border:1px solid '+col+';color:'+col+';font-family:Share Tech Mono,monospace;font-size:12px;font-weight:700;padding:3px 7px;border-radius:4px;cursor:pointer;user-select:none;">'+t.val+'<span style="font-size:9px;opacity:0.6;margin-left:2px;">×</span></span>';}).join('');}
+function nbRemoveToken(idx){nbTokens.splice(idx,1);nbRenderTokens();}
+function nbAddNote(){if(!nbTokens.length)return;var text=nbTokens.map(function(t){return t.val;}).join(' ');var dir=null;nbTokens.forEach(function(t){if(t.cat==='cat-dir'){if(t.val==='←G')dir='G';else if(t.val==='D→')dir='D';else if(t.val==='↑')dir='T';else if(t.val==='↩DC')dir='DC';}});var note={id:Date.now(),text:text,dir:dir,tokens:nbTokens.slice()};nbNotes.push(note);nbClearBuilder();nbRenderList();showToast('#'+nbNotes.length+' — '+text,'tblue');}
+function nbUndo(){if(!nbNotes.length){showToast('Aucune note','tred');return;}var last=nbNotes.pop();nbRenderList();showToast('↩ Supprimé : '+last.text,'tyellow');}
+function nbDeleteNote(id){nbNotes=nbNotes.filter(function(n){return n.id!==id;});nbRenderList();}
+function nbToggleList(){document.getElementById('nbListWrap').classList.toggle('open');if(document.getElementById('nbListWrap').classList.contains('open'))nbRenderList();}
+function nbRenderList(){var count=nbNotes.length;var fab=document.getElementById('nbCounterFab');fab.textContent='📖 '+count+' note'+(count>1?'s':'');fab.className='nb-counter-fab'+(count>0?' has-notes':'');document.getElementById('nbListCount').textContent=count;var scroll=document.getElementById('nbListScroll');if(!count){scroll.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted);font-size:12px;">Aucune note</div>';return;}scroll.innerHTML=nbNotes.map(function(n,i){return'<div class="nb-note-row"><div class="nb-note-num">'+pad(i+1)+'</div><div class="nb-note-text">'+n.text+'</div><button class="nb-note-del" onclick="nbDeleteNote('+n.id+')">×</button></div>';}).join('');}
+function nbClearAll(){if(!confirm('Effacer toutes les notes ?'))return;nbNotes=[];nbRenderList();}
+function nbExportTxt(){if(!nbNotes.length){alert('Aucune note.');return;}var lines=['=== ROAD BOOK ===',''];nbNotes.forEach(function(n,i){lines.push(pad(i+1)+'. '+n.text);});dl('roadbook.txt',lines.join('\n'),'text/plain');}
+function nbLoadRoadBooks(){try{var s=localStorage.getItem('nb_roadbooks');if(s)nbRoadBooks=JSON.parse(s);}catch(e){nbRoadBooks=[];}}
+function nbSaveRb(){if(!nbNotes.length){showToast('Aucune note','tred');return;}var nameInput=document.getElementById('nbSpecialeName');var name=nameInput&&nameInput.value.trim()||'';if(!name){var now=new Date();var def='RB '+now.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+' '+now.getHours()+'h'+pad(now.getMinutes());name=prompt('Nom :',def);if(name===null)return;if(!name.trim())name=def;if(nameInput)nameInput.value=name.trim();}var rb={id:Date.now(),name:name.trim(),notes:nbNotes.slice(),date:new Date().toLocaleDateString('fr-FR')};nbRoadBooks.unshift(rb);localStorage.setItem('nb_roadbooks',JSON.stringify(nbRoadBooks));nbPopulateRbSelect();document.getElementById('nbRbSelect').value=rb.id;nbLoadRb();showToast('💾 '+rb.name+' sauvegardé','tgreen');}
+function nbPopulateRbSelect(){nbLoadRoadBooks();var sel=document.getElementById('nbRbSelect');var cur=sel.value;sel.innerHTML='<option value="">— Choisir un road book —</option>';nbRoadBooks.forEach(function(rb){var opt=document.createElement('option');opt.value=rb.id;opt.textContent=rb.name+' ('+rb.notes.length+' notes)';sel.appendChild(opt);});if(cur)sel.value=cur;}
+function nbLoadRb(){var id=parseInt(document.getElementById('nbRbSelect').value);var rb=nbRoadBooks.find(function(r){return r.id===id;});if(!rb){nbActiveRbId=null;nbRenderCourse(null);return;}nbActiveRbId=id;nbCurIdx=0;nbRenderCourse(rb);document.getElementById('nbCourseControls').style.display='grid';showToast('📖 '+rb.name+' chargé','tblue');}
+function nbSetNav(m){nbNavMode=m;document.getElementById('nbNavManuel').className='nb-nav-opt'+(m==='manuel'?' sel':'');document.getElementById('nbNavAuto').className='nb-nav-opt'+(m==='auto'?' sel':'');}
+function nbGetActiveRb(){return nbRoadBooks.find(function(r){return r.id===nbActiveRbId;});}
+function nbRenderCourse(rb){var el=document.getElementById('nbCourseDisplay');if(!rb||!rb.notes||!rb.notes.length){el.innerHTML='<div class="nb-course-empty"><div class="nb-course-empty-icon">📖</div><div class="nb-course-empty-text">Sauvegardez vos notes et chargez-les ici</div></div>';return;}var total=rb.notes.length,note=rb.notes[nbCurIdx],next=rb.notes[nbCurIdx+1],pct=Math.round(((nbCurIdx+1)/total)*100);var arrow=note.dir==='G'?'←':note.dir==='D'?'→':note.dir==='T'?'↑':note.dir==='DC'?'↩':'';var noteColor='var(--text)';if(note.text&&note.text.indexOf('DANGER')>=0)noteColor='var(--red)';else if(note.text&&(note.text.indexOf('Attention')>=0||note.text.indexOf('Prudence')>=0))noteColor='var(--yellow)';el.innerHTML='<div class="nb-progress-bar"><div class="nb-progress-fill" style="width:'+pct+'%"></div></div><div class="nb-note-num-big">Note '+(nbCurIdx+1)+' / '+total+'</div>'+(arrow?'<div class="nb-note-dir-arrow">'+arrow+'</div>':'')+'<div class="nb-note-main" style="color:'+noteColor+'">'+note.text+'</div>'+(next?'<div class="nb-note-next"><div class="nb-note-next-label">Note suivante</div><div class="nb-note-next-text">'+next.text+'</div></div>':'<div class="nb-note-next" style="border-color:var(--green);"><div class="nb-note-next-text" style="color:var(--green)">🏁 FIN DU ROAD BOOK</div></div>');}
+function nbNext(){var rb=nbGetActiveRb();if(!rb)return;if(nbCurIdx<rb.notes.length-1){nbCurIdx++;nbRenderCourse(rb);}else showToast('🏁 Fin !','tgreen');}
+function nbPrev(){var rb=nbGetActiveRb();if(!rb)return;if(nbCurIdx>0){nbCurIdx--;nbRenderCourse(rb);}}
+function nbRestart(){nbCurIdx=0;var rb=nbGetActiveRb();if(rb)nbRenderCourse(rb);}
+
+// ─── PLANNING ───
+var plEsData=[],plTimeline=[],plCurrentIdx=0,plAutoTimer=null;
+function plBuildEsList(){var nb=Math.min(Math.max(parseInt(document.getElementById('plNbEs').value)||3,1),20);while(plEsData.length<nb)plEsData.push({nom:'',routier:20,retour:20});plEsData=plEsData.slice(0,nb);var html='';for(var i=0;i<nb;i++){var d=plEsData[i];html+='<div class="pl-es-card"><div class="pl-es-header"><span class="pl-es-num">ES '+(i+1)+'</span><input type="text" placeholder="Nom spéciale" value="'+d.nom+'" oninput="plEsData['+i+'].nom=this.value" style="flex:1;background:transparent;border:none;color:var(--text);font-family:\'Rajdhani\',sans-serif;font-size:13px;font-weight:700;outline:none;padding:0 4px;"></div><div class="pl-es-body"><div class="pl-es-field full"><div class="pl-es-field-label">Routier vers ES (min)</div><input type="number" value="'+d.routier+'" min="1" max="240" oninput="plEsData['+i+'].routier=+this.value"></div>'+(i===nb-1?'<div class="pl-es-field full"><div class="pl-es-field-label">Routier retour parc (min)</div><input type="number" value="'+(d.retour||20)+'" min="1" max="240" oninput="plEsData['+i+'].retour=+this.value"></div>':'')+'</div></div>';}document.getElementById('plEsList').innerHTML=html;}
+function plCalculate(){
+  var sortieParcVal=document.getElementById('plSortieParc').value;
+  if(!sortieParcVal){showToast('⚠ Saisissez l\'heure de sortie du parc','tred');return;}
+  var routierAsst=Math.max(parseInt(document.getElementById('plRoutierAsst').value)||0,0);
+  var asstGlobal=Math.max(parseInt(document.getElementById('plAsst').value)||30,1);
+  var parts=sortieParcVal.split(':');
+  var now=new Date();
+  var cur=new Date(now.getFullYear(),now.getMonth(),now.getDate(),parseInt(parts[0]),parseInt(parts[1]),0,0).getTime();
+  plTimeline=[];
+
+  plTimeline.push({ts:cur,label:'🔴 Sortie parc fermé',type:'parc',dur:0,esIdx:-1});
+
+  if(routierAsst>0){
+    plTimeline.push({ts:cur,label:'🔵 Routier → Assistance ('+routierAsst+' min)',type:'routier',dur:routierAsst,esIdx:-1,cdDur:routierAsst});
+    cur+=routierAsst*60000;
+  }
+
+  plTimeline.push({ts:cur,label:'🔧 Assistance ('+asstGlobal+' min)',type:'asst',dur:asstGlobal,esIdx:-1,cdDur:asstGlobal});
+  cur+=asstGlobal*60000;
+
+  var nb=plEsData.length;
+  for(var i=0;i<nb;i++){
+    var d=plEsData[i];
+    var nom=d.nom||'ES '+(i+1);
+    var routier=Math.max(d.routier||20,1);
+
+    // Routier vers l'ES — le temps de départ ES est la fin du routier (= heure de départ en bas de la liste chronométrée)
+    plTimeline.push({ts:cur,label:'🔵 Routier → '+nom+' ('+routier+' min)',type:'routier',dur:routier,esIdx:i,cdDur:routier});
+    cur+=routier*60000;
+
+    // Zone 3 min
+    plTimeline.push({ts:cur,label:'🟡 Zone départ '+nom+' (−3 min)',type:'3min',dur:3,esIdx:i});
+    cur+=3*60000;
+
+    // Départ ES — heure connue, durée inconnue → on ne bloque pas le temps
+    plTimeline.push({ts:cur,label:'🚦 Départ — '+nom,type:'es',dur:0,esIdx:i,isDepart:true});
+
+    if(i===nb-1){
+      var retour=Math.max(d.retour||20,1);
+      plTimeline.push({ts:cur,label:'🔵 Routier retour parc ('+retour+' min)',type:'routier',dur:retour,esIdx:i,cdDur:retour});
+      cur+=retour*60000;
+      plTimeline.push({ts:cur,label:'🟢 Retour parc',type:'parc',dur:0,esIdx:-1});
+    }
+  }
+  plRenderTimeline();
+  showToast('✅ Planning — '+plTimeline.length+' étapes','tgreen');
+}
+function plRenderTimeline(){var tl=document.getElementById('plTimeline'),rows=document.getElementById('plTimelineRows');tl.style.display='block';var now=Date.now();var html='';plTimeline.forEach(function(ev,i){var d=new Date(ev.ts);var time=pad(d.getHours())+':'+pad(d.getMinutes());var done=ev.ts<now&&i<plTimeline.length-1;var active=!done&&(i===plTimeline.length-1||plTimeline[i+1].ts>now)&&ev.ts<=now;var durStr=ev.dur>0?ev.dur+'min':'';html+='<div class="pl-tl-row type-'+ev.type+(active?' active-now':done?' done':'')+'"><div class="pl-tl-time">'+time+'</div><div class="pl-tl-dot"></div><div class="pl-tl-label">'+ev.label+'</div><div class="pl-tl-dur">'+durStr+'</div></div>';});rows.innerHTML=html;plUpdateCurrentStep();}
+function plUpdateCurrentStep(){var now=Date.now();var cur=null,curIdx=0;for(var i=0;i<plTimeline.length;i++){if(plTimeline[i].ts<=now){cur=plTimeline[i];curIdx=i;}}plCurrentIdx=curIdx;var box=document.getElementById('plCurrentEs'),txt=document.getElementById('plCurrentEsText');if(cur){box.style.display='block';var next=plTimeline[curIdx+1];var nextTime=next?new Date(next.ts):'';var nextStr=next?' → '+pad(nextTime.getHours())+':'+pad(nextTime.getMinutes()):'';txt.textContent=cur.label+nextStr;document.getElementById('plBtnLoadCh').style.display=cur.cdDur?'block':'none';}else{box.style.display='none';}}
+function plLoadIntoCH(){if(!plTimeline.length){showToast('⚠ Calculez le planning','tred');return;}var ev=plTimeline[plCurrentIdx];if(!ev||!ev.cdDur){showToast('Pas de liaison pour cette étape','tyellow');return;}var d=new Date(ev.ts);document.getElementById('cdStartTime').value=pad(d.getHours())+':'+pad(d.getMinutes())+':00';document.getElementById('cdMinutes').value=ev.cdDur;var nom=plEsData[ev.esIdx]?plEsData[ev.esIdx].nom:'';if(nom)document.getElementById('asstNom').value=nom;switchTab('pointage');showToast('✅ Chargé dans CH','tblue');}
+function plAutoLoad(){if(!plTimeline.length){showToast('⚠ Calculez le planning','tred');return;}showToast('🔄 Auto-CH activé','tgreen');if(plAutoTimer)clearInterval(plAutoTimer);plAutoTimer=setInterval(function(){plUpdateCurrentStep();var ev=plTimeline[plCurrentIdx];if(ev&&ev.cdDur&&!cdArmed)plLoadIntoCH();if(document.getElementById('panel-planning').classList.contains('active'))plRenderTimeline();},10000);}
+function plNextStep(){if(plCurrentIdx<plTimeline.length-1){plCurrentIdx++;var ev=plTimeline[plCurrentIdx];var d=new Date(ev.ts);document.getElementById('plCurrentEsText').textContent=ev.label+' ('+pad(d.getHours())+':'+pad(d.getMinutes())+')';if(ev.cdDur)plLoadIntoCH();}}
+function plClear(){plTimeline=[];document.getElementById('plTimeline').style.display='none';document.getElementById('plCurrentEs').style.display='none';if(plAutoTimer){clearInterval(plAutoTimer);plAutoTimer=null;}}
+
+// ─── OVERLAY ASSISTANCE ───
+var asIntervalRef=null;
+function parseTimeToTs(val){if(!val)return null;var parts=val.split(':');var h=parseInt(parts[0]||0),m=parseInt(parts[1]||0),s=parseInt(parts[2]||0);var now=new Date();return new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,s,0).getTime();}
+function fmtCountdownShort(diffMs){if(diffMs<=0)return 'PASSÉ';var m=Math.floor(diffMs/60000),s=Math.floor((diffMs%60000)/1000);return'dans '+(m>0?m+'min ':'')+s+'s';}
+function openAssistanceFullscreen(){var overlay=document.getElementById('assistanceOverlay');overlay.style.display='flex';document.getElementById('asNom').textContent=document.getElementById('asstNom').value||'';var ev=document.getElementById('asstEntree').value,sv=document.getElementById('asstSortie').value;document.getElementById('asEntree').textContent=ev?ev.substring(0,5):'--:--';document.getElementById('asSortie').textContent=sv?sv.substring(0,5):'--:--';try{document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();}catch(e){}if(asIntervalRef)clearInterval(asIntervalRef);asIntervalRef=setInterval(asUpdate,200);asUpdate();}
+function closeAssistanceFullscreen(){document.getElementById('assistanceOverlay').style.display='none';if(asIntervalRef){clearInterval(asIntervalRef);asIntervalRef=null;}try{document.exitFullscreen&&document.exitFullscreen();}catch(e){}}
+function asUpdate(){var now=Date.now(),n=new Date(now);document.getElementById('asHorloge').textContent=pad(n.getHours())+':'+pad(n.getMinutes())+':'+pad(n.getSeconds());var cdEl=document.getElementById('asCountdown'),phEl=document.getElementById('asPhase'),barEl=document.getElementById('asProgressBar');if(cdArmed&&cdEndTs){var rem=cdEndTs-now;var totalSec=Math.ceil(Math.max(rem,0)/1000);var mm=Math.floor(totalSec/60),ss=totalSec%60;cdEl.textContent=mm+':'+pad(ss);var pct=Math.max(0,Math.min(100,(rem/cdTotalMs)*100));barEl.style.width=pct+'%';if(rem>cdAlerteSec){cdEl.style.color='#00aaff';barEl.style.background='#00aaff';phEl.textContent='En route';}else if(rem>60000){cdEl.style.color='#ffd600';barEl.style.background='#ffd600';phEl.textContent='Approche !';}else if(rem>0){cdEl.style.color='#e8001d';barEl.style.background='#e8001d';phEl.textContent='IMMINENT !';}else{cdEl.textContent='0:00';cdEl.style.color='#00e676';phEl.textContent='HEURE DU CH !';}}else{cdEl.textContent='--:--';cdEl.style.color='#333';phEl.textContent='';barEl.style.width='0%';}var eTs=parseTimeToTs(document.getElementById('asstEntree').value);if(eTs){var dE=eTs-now;document.getElementById('asEntreeCountdown').textContent=dE>0?fmtCountdownShort(dE):'✅ Passée';document.getElementById('asEntreeCountdown').style.color=dE>0&&dE<120000?'#ffd600':'#555';}var sTs=parseTimeToTs(document.getElementById('asstSortie').value);if(sTs){var dS=sTs-now;document.getElementById('asSortieCountdown').textContent=dS>0?fmtCountdownShort(dS):'⛔ Passée';document.getElementById('asSortieCountdown').style.color=dS>0&&dS<120000?'#ffd600':'#555';}}
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){var overlay=document.getElementById('assistanceOverlay');if(overlay&&overlay.style.display!=='none')closeAssistanceFullscreen();}});
+
+// ─── INIT ───
+(function(){var n=new Date();document.getElementById('cdStartTime').value=pad(n.getHours())+':'+pad(n.getMinutes())+':00';})();
+loadData();
+updateAutoIndicator();
+</script>
+
+<!-- ══════ CSS TÉLÉMÉTRIE ══════ -->
+<style>
+.tl-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+/* Live bar */
+.tl-live-bar{display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--bg);border-bottom:2px solid var(--border);flex-shrink:0;}
+.tl-live-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;border-right:1px solid var(--border);}
+.tl-live-cell:last-child{border-right:none;}
+.tl-live-label{font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:2px;}
+.tl-live-val{font-family:'Share Tech Mono',monospace;font-size:22px;font-weight:700;color:var(--text);line-height:1;}
+.tl-live-unit{font-size:8px;color:var(--muted);margin-top:1px;letter-spacing:1px;}
+.tl-live-cell.speed .tl-live-val{color:var(--blue);font-size:28px;}
+.tl-live-cell.glat .tl-live-val{color:var(--orange);}
+.tl-live-cell.glong .tl-live-val{color:var(--yellow);}
+/* G-meter gauge */
+.tl-gauge-row{display:flex;gap:10px;padding:8px 14px;flex-shrink:0;align-items:center;}
+.tl-gauge-wrap{flex:1;display:flex;flex-direction:column;gap:3px;}
+.tl-gauge-label{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;display:flex;justify-content:space-between;}
+.tl-gauge-track{height:10px;background:var(--border);border-radius:5px;position:relative;overflow:hidden;}
+.tl-gauge-fill{height:100%;border-radius:5px;position:absolute;transition:width 0.1s,background 0.2s;}
+/* Sub-tabs */
+.tl-subtabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.tl-stab{flex:1;padding:9px 6px;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:none;border:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;}
+.tl-stab.active{color:var(--text);border-bottom-color:var(--orange);}
+/* Controls */
+.tl-controls{display:flex;gap:8px;padding:8px 14px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;align-items:center;}
+.tl-name-input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;padding:6px 9px;border-radius:4px;outline:none;}
+.tl-name-input:focus{border-color:var(--orange);}
+.tl-rec-btn{padding:9px 14px;border:none;border-radius:5px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;text-transform:uppercase;white-space:nowrap;}
+.tl-rec-btn.idle{background:var(--orange);color:#000;}
+.tl-rec-btn.recording{background:var(--red);color:#fff;animation:recPulse 1s ease-in-out infinite;}
+/* Graphiques */
+.tl-chart-area{flex:1;overflow-y:auto;padding:10px 14px;}
+.tl-chart-block{margin-bottom:16px;}
+.tl-chart-title{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:5px;}
+.tl-canvas-wrap{background:var(--surface2);border:1px solid var(--border);border-radius:5px;overflow:hidden;}
+/* Sessions */
+.tl-sessions{flex:1;overflow-y:auto;}
+.tl-sess-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;}
+.tl-sess-item:hover{background:rgba(255,255,255,0.03);}
+.tl-sess-dot{width:8px;height:8px;border-radius:50%;background:var(--orange);flex-shrink:0;}
+.tl-sess-name{flex:1;font-size:13px;font-weight:700;}
+.tl-sess-detail{font-size:10px;color:var(--muted);margin-top:2px;}
+.tl-sess-del{background:none;border:none;color:var(--border);font-size:15px;cursor:pointer;padding:3px;}
+.tl-sess-del:hover{color:var(--red);}
+/* Stats cards */
+.tl-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 14px;flex-shrink:0;}
+.tl-stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:8px 10px;text-align:center;}
+.tl-stat-label{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:3px;}
+.tl-stat-val{font-family:'Share Tech Mono',monospace;font-size:20px;font-weight:700;}
+.tl-stat-val.orange{color:var(--orange);}
+.tl-stat-val.blue{color:var(--blue);}
+.tl-stat-val.green{color:var(--green);}
+.tl-stat-val.red{color:var(--red);}
+</style>
+
+<!-- ══════ PANEL TÉLÉMÉTRIE ══════ -->
+<div class="panel" id="panel-telem">
+<div class="tl-panel">
+
+  <!-- Indicateurs live -->
+  <div class="tl-live-bar">
+    <div class="tl-live-cell speed">
+      <div class="tl-live-label">Vitesse</div>
+      <div class="tl-live-val" id="tlSpeed">0</div>
+      <div class="tl-live-unit">km/h</div>
+    </div>
+    <div class="tl-live-cell glat">
+      <div class="tl-live-label">G Latéral</div>
+      <div class="tl-live-val" id="tlGlat">0.00</div>
+      <div class="tl-live-unit">G</div>
+    </div>
+    <div class="tl-live-cell glong">
+      <div class="tl-live-label">G Long.</div>
+      <div class="tl-live-val" id="tlGlong">0.00</div>
+      <div class="tl-live-unit">G</div>
+    </div>
+  </div>
+
+  <!-- Jauges G -->
+  <div class="tl-gauge-row">
+    <div class="tl-gauge-wrap">
+      <div class="tl-gauge-label"><span>G Latéral</span><span id="tlGlatMax">max 0.00G</span></div>
+      <div class="tl-gauge-track">
+        <div id="tlGlatBar" class="tl-gauge-fill" style="width:0%;background:var(--orange);left:50%;transform:translateX(-50%);"></div>
+      </div>
+    </div>
+    <div class="tl-gauge-wrap">
+      <div class="tl-gauge-label"><span>G Long.</span><span id="tlGlongMax">max 0.00G</span></div>
+      <div class="tl-gauge-track">
+        <div id="tlGlongBar" class="tl-gauge-fill" style="width:0%;background:var(--yellow);"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contrôles enregistrement -->
+  <div class="tl-controls">
+    <input class="tl-name-input" id="tlSessionName" placeholder="Nom session (ex: ES3 pass.1)" maxlength="40">
+    <button class="tl-rec-btn idle" id="tlRecBtn" onclick="tlToggleRecord()">⏺ REC</button>
+  </div>
+
+  <!-- Sous-onglets -->
+  <div class="tl-subtabs">
+    <button class="tl-stab active" id="tlTabSessions" onclick="tlSetSubTab('sessions')">📋 Sessions</button>
+    <button class="tl-stab" id="tlTabGraphs" onclick="tlSetSubTab('graphs')">📈 Graphiques</button>
+    <button class="tl-stab" id="tlTabCompare" onclick="tlSetSubTab('compare')">⚡ Comparer</button>
+  </div>
+
+  <!-- SESSIONS -->
+  <div id="tlPanelSessions" class="tl-sessions">
+    <div id="tlSessionList"></div>
+    <div class="empty-state" id="tlSessionEmpty"><div class="empty-icon">📡</div><div class="empty-text">Aucune session enregistrée<br>Lancez REC pendant une spéciale</div></div>
+  </div>
+
+  <!-- GRAPHIQUES -->
+  <div id="tlPanelGraphs" style="display:none;flex:1;overflow-y:auto;flex-direction:column;">
+    <div style="padding:8px 14px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:8px;align-items:center;">
+      <select id="tlGraphSelect" style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;padding:6px 9px;border-radius:4px;outline:none;color-scheme:dark;" onchange="tlDrawGraphs()">
+        <option value="">— Choisir une session —</option>
+      </select>
+    </div>
+    <div class="tl-chart-area" id="tlChartArea">
+      <div class="empty-state"><div class="empty-icon">📈</div><div class="empty-text">Choisissez une session</div></div>
+    </div>
+  </div>
+
+  <!-- COMPARER -->
+  <div id="tlPanelCompare" style="display:none;flex:1;overflow-y:auto;flex-direction:column;">
+    <div style="padding:8px 14px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:8px;flex-direction:column;">
+      <select id="tlCompSess1" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;padding:6px 9px;border-radius:4px;outline:none;color-scheme:dark;"><option value="">— Session A (référence) —</option></select>
+      <select id="tlCompSess2" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;padding:6px 9px;border-radius:4px;outline:none;color-scheme:dark;"><option value="">— Session B (comparaison) —</option></select>
+      <button onclick="tlDrawCompare()" style="background:var(--orange);color:#000;border:none;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;padding:9px;border-radius:5px;cursor:pointer;">⚡ COMPARER</button>
+    </div>
+    <div id="tlCompareArea" style="padding:10px 14px;flex:1;overflow-y:auto;">
+      <div class="empty-state"><div class="empty-icon">⚡</div><div class="empty-text">Sélectionnez deux sessions</div></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+// ════════════════════════════════════════
+//  TÉLÉMÉTRIE
+// ════════════════════════════════════════
+var tlRecording=false;
+var tlSession=null;       // session en cours d'enregistrement
+var tlSessions=[];        // sessions sauvegardées
+var tlSubTab='sessions';
+var tlGpsWatch=null;
+var tlAccelHandler=null;
+var tlPrevSpeed=null;
+var tlRecInterval=null;
+// Données live
+var tlLive={speed:0,gLat:0,gLong:0,gLong_prev:0,alt:0};
+var tlMaxLat=0,tlMaxLong=0,tlMaxSpeed=0;
+
+function tlInit(){
+  tlLoadSessions();
+  tlStartLiveSensors();
+}
+
+// ─── CAPTEURS LIVE ───
+function tlStartLiveSensors(){
+  // GPS vitesse
+  if(navigator.geolocation){
+    if(tlGpsWatch) navigator.geolocation.clearWatch(tlGpsWatch);
+    tlGpsWatch=navigator.geolocation.watchPosition(function(pos){
+      var kmh=pos.coords.speed!=null?Math.round(pos.coords.speed*3.6):0;
+      tlLive.speed=kmh;
+      tlLive.alt=Math.round(pos.coords.altitude||0);
+      document.getElementById('tlSpeed').textContent=kmh;
+      // Calcul G long depuis variation de vitesse GPS
+      if(tlPrevSpeed!==null){
+        var dv=(kmh-tlPrevSpeed)/3.6; // m/s
+        var glong=dv/9.81;
+        tlLive.gLong=glong;
+        document.getElementById('tlGlong').textContent=(glong>=0?'+':'')+glong.toFixed(2);
+        var glongPct=Math.min(Math.abs(glong)/2*100,100);
+        document.getElementById('tlGlongBar').style.width=glongPct+'%';
+        document.getElementById('tlGlongBar').style.background=glong<-0.3?'var(--red)':glong>0.1?'var(--green)':'var(--yellow)';
+        if(Math.abs(glong)>tlMaxLong){tlMaxLong=Math.abs(glong);document.getElementById('tlGlongMax').textContent='max '+tlMaxLong.toFixed(2)+'G';}
+      }
+      tlPrevSpeed=kmh;
+      if(kmh>tlMaxSpeed){tlMaxSpeed=kmh;}
+    },function(){},{enableHighAccuracy:true,maximumAge:500,timeout:10000});
+  }
+
+  // Accéléromètre → G latéral
+  if(window.DeviceMotionEvent){
+    if(tlAccelHandler) window.removeEventListener('devicemotion',tlAccelHandler);
+    tlAccelHandler=function(e){
+      var acc=e.accelerationIncludingGravity||e.acceleration;
+      if(!acc) return;
+      var gLat=(acc.x||0)/9.81;
+      tlLive.gLat=gLat;
+      document.getElementById('tlGlat').textContent=(gLat>=0?'+':'')+gLat.toFixed(2);
+      var glatPct=Math.min(Math.abs(gLat)/2*100,100);
+      document.getElementById('tlGlatBar').style.width=glatPct+'%';
+      document.getElementById('tlGlatBar').style.background=Math.abs(gLat)>1.2?'var(--red)':Math.abs(gLat)>0.8?'var(--orange)':'var(--blue)';
+      if(Math.abs(gLat)>tlMaxLat){tlMaxLat=Math.abs(gLat);document.getElementById('tlGlatMax').textContent='max '+tlMaxLat.toFixed(2)+'G';}
+    };
+    window.addEventListener('devicemotion',tlAccelHandler);
+  }
+
+  // iOS nécessite une permission explicite
+  if(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function'){
+    DeviceMotionEvent.requestPermission().then(function(r){
+      if(r==='granted') window.addEventListener('devicemotion',tlAccelHandler);
+    }).catch(function(){});
+  }
+}
+
+// ─── ENREGISTREMENT ───
+function tlToggleRecord(){
+  if(tlRecording) tlStopRecord();
+  else tlStartRecord();
+}
+
+function tlStartRecord(){
+  var name=document.getElementById('tlSessionName').value.trim()||'Session '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  tlSession={
+    id:Date.now(), name:name,
+    date:new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}),
+    points:[], // {t,speed,gLat,gLong,alt}
+    maxSpeed:0, maxGLat:0, maxGLong:0,
+    startTs:Date.now()
+  };
+  tlRecording=true;
+  tlMaxLat=0; tlMaxLong=0; tlMaxSpeed=0;
+  var btn=document.getElementById('tlRecBtn');
+  btn.textContent='⏹ STOP';
+  btn.className='tl-rec-btn recording';
+  // Enregistrer un point toutes les 500ms
+  tlRecInterval=setInterval(function(){
+    if(!tlSession) return;
+    var t=(Date.now()-tlSession.startTs)/1000;
+    var pt={t:Math.round(t*10)/10,spd:tlLive.speed,lat:tlLive.gLat,lon:tlLive.gLong,alt:tlLive.alt};
+    tlSession.points.push(pt);
+    if(tlLive.speed>tlSession.maxSpeed) tlSession.maxSpeed=tlLive.speed;
+    if(Math.abs(tlLive.gLat)>tlSession.maxGLat) tlSession.maxGLat=Math.abs(tlLive.gLat);
+    if(Math.abs(tlLive.gLong)>tlSession.maxGLong) tlSession.maxGLong=Math.abs(tlLive.gLong);
+  },500);
+  showToast('📡 Télémétrie démarrée','tred');
+}
+
+function tlStopRecord(){
+  tlRecording=false;
+  if(tlRecInterval){clearInterval(tlRecInterval);tlRecInterval=null;}
+  if(tlSession&&tlSession.points.length>2){
+    tlSession.duration=tlSession.points[tlSession.points.length-1].t;
+    tlSessions.unshift(tlSession);
+    tlSaveSessions();
+    showToast('💾 Session "'+tlSession.name+'" sauvegardée ('+tlSession.points.length+' pts)','tgreen');
+  } else {
+    showToast('Session trop courte','tyellow');
+  }
+  tlSession=null;
+  var btn=document.getElementById('tlRecBtn');
+  btn.textContent='⏺ REC';
+  btn.className='tl-rec-btn idle';
+  tlRenderSessionList();
+  tlPopulateSelects();
+}
+
+// ─── STOCKAGE ───
+function tlSaveSessions(){
+  // On garde seulement les 10 dernières sessions pour ne pas saturer localStorage
+  var toSave=tlSessions.slice(0,10);
+  try{localStorage.setItem('tl_sessions',JSON.stringify(toSave));}catch(e){showToast('⚠ Stockage plein','tred');}
+}
+
+function tlLoadSessions(){
+  try{var s=localStorage.getItem('tl_sessions');if(s)tlSessions=JSON.parse(s);}catch(e){tlSessions=[];}
+}
+
+// ─── SUB-TABS ───
+function tlSetSubTab(t){
+  tlSubTab=t;
+  ['sessions','graphs','compare'].forEach(function(s){
+    document.getElementById('tlTab'+s.charAt(0).toUpperCase()+s.slice(1)).className='tl-stab'+(t===s?' active':'');
+    document.getElementById('tlPanel'+s.charAt(0).toUpperCase()+s.slice(1)).style.display=t===s?'flex':'none';
+  });
+  if(t==='graphs'||t==='compare') tlPopulateSelects();
+}
+
+// ─── LISTE SESSIONS ───
+function tlRenderSessionList(){
+  var list=document.getElementById('tlSessionList');
+  var empty=document.getElementById('tlSessionEmpty');
+  if(!tlSessions.length){list.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  list.innerHTML=tlSessions.map(function(s,i){
+    var dur=s.duration?Math.floor(s.duration/60)+'m '+Math.round(s.duration%60)+'s':'—';
+    return'<div class="tl-sess-item" onclick="tlViewSession('+i+')">'
+      +'<div class="tl-sess-dot"></div>'
+      +'<div><div class="tl-sess-name">'+s.name+'</div>'
+      +'<div class="tl-sess-detail">'+s.date+' · '+dur+' · VMax:'+s.maxSpeed+'km/h · GLat:'+s.maxGLat.toFixed(2)+'G</div></div>'
+      +'<button class="tl-sess-del" onclick="tlDeleteSession(event,'+i+')">×</button>'
+      +'</div>';
+  }).join('');
+}
+
+function tlDeleteSession(e,i){
+  e.stopPropagation();
+  if(!confirm('Supprimer cette session ?'))return;
+  tlSessions.splice(i,1);
+  tlSaveSessions();
+  tlRenderSessionList();
+  tlPopulateSelects();
+}
+
+function tlViewSession(i){
+  document.getElementById('tlGraphSelect').value=tlSessions[i].id;
+  tlSetSubTab('graphs');
+  tlDrawGraphs();
+}
+
+// ─── SELECTS ───
+function tlPopulateSelects(){
+  var opts='<option value="">— Choisir —</option>'+tlSessions.map(function(s){
+    return'<option value="'+s.id+'">'+s.name+'</option>';
+  }).join('');
+  document.getElementById('tlGraphSelect').innerHTML=opts;
+  document.getElementById('tlCompSess1').innerHTML=opts.replace('— Choisir —','— Session A (référence) —');
+  document.getElementById('tlCompSess2').innerHTML=opts.replace('— Choisir —','— Session B (comparaison) —');
+}
+
+// ─── GRAPHIQUES ───
+function tlGetSession(id){return tlSessions.find(function(s){return s.id==id;});}
+
+function tlDrawGraphs(){
+  var id=document.getElementById('tlGraphSelect').value;
+  var area=document.getElementById('tlChartArea');
+  if(!id){area.innerHTML='<div class="empty-state"><div class="empty-icon">📈</div><div class="empty-text">Choisissez une session</div></div>';return;}
+  var sess=tlGetSession(id);
+  if(!sess||!sess.points.length){area.innerHTML='<div class="empty-state"><div class="empty-icon">📈</div><div class="empty-text">Session vide</div></div>';return;}
+
+  var pts=sess.points;
+  var dur=sess.duration||pts[pts.length-1].t;
+
+  // Stats
+  var statsHtml='<div class="tl-stats">'
+    +'<div class="tl-stat-card"><div class="tl-stat-label">Vitesse max</div><div class="tl-stat-val blue">'+sess.maxSpeed+' <span style="font-size:12px;">km/h</span></div></div>'
+    +'<div class="tl-stat-card"><div class="tl-stat-label">G Latéral max</div><div class="tl-stat-val orange">'+sess.maxGLat.toFixed(2)+' <span style="font-size:12px;">G</span></div></div>'
+    +'<div class="tl-stat-card"><div class="tl-stat-label">G Long. max</div><div class="tl-stat-val red">'+sess.maxGLong.toFixed(2)+' <span style="font-size:12px;">G</span></div></div>'
+    +'<div class="tl-stat-card"><div class="tl-stat-label">Durée</div><div class="tl-stat-val green">'+Math.floor(dur/60)+'m'+Math.round(dur%60)+'s</div></div>'
+    +'</div>';
+
+  area.innerHTML=statsHtml
+    +'<div class="tl-chart-block"><div class="tl-chart-title">Vitesse (km/h)</div><div class="tl-canvas-wrap"><canvas id="cvSpeed" height="120"></canvas></div></div>'
+    +'<div class="tl-chart-block"><div class="tl-chart-title">G Latéral</div><div class="tl-canvas-wrap"><canvas id="cvGlat" height="100"></canvas></div></div>'
+    +'<div class="tl-chart-block"><div class="tl-chart-title">G Longitudinal (frein/accel)</div><div class="tl-canvas-wrap"><canvas id="cvGlong" height="100"></canvas></div></div>';
+
+  setTimeout(function(){
+    tlDrawChart('cvSpeed', pts, 'spd', '#00aaff', 0, Math.max(sess.maxSpeed*1.1,60));
+    tlDrawChart('cvGlat',  pts, 'lat', '#ff6b00', -2, 2, true);
+    tlDrawChart('cvGlong', pts, 'lon', '#ffd600', -2, 2, true);
+  },50);
+}
+
+function tlDrawChart(canvasId, pts, key, color, yMin, yMax, midLine){
+  var cv=document.getElementById(canvasId);
+  if(!cv) return;
+  cv.width=cv.parentElement.offsetWidth;
+  var h=cv.height, w=cv.width;
+  var ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,w,h);
+
+  // Fond
+  ctx.fillStyle='#1a1a1a'; ctx.fillRect(0,0,w,h);
+
+  // Grille
+  ctx.strokeStyle='#2a2a2a'; ctx.lineWidth=1;
+  for(var gy=0;gy<=4;gy++){var y=h*gy/4;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+
+  // Ligne centrale (pour G)
+  if(midLine){
+    ctx.strokeStyle='#444'; ctx.lineWidth=1;
+    var midY=h*(1-(0-yMin)/(yMax-yMin));
+    ctx.beginPath(); ctx.moveTo(0,midY); ctx.lineTo(w,midY); ctx.stroke();
+  }
+
+  // Données
+  if(!pts.length) return;
+  var maxT=pts[pts.length-1].t||1;
+  ctx.strokeStyle=color; ctx.lineWidth=2; ctx.lineJoin='round';
+  ctx.beginPath();
+  pts.forEach(function(p,i){
+    var x=(p.t/maxT)*w;
+    var val=p[key]||0;
+    var y=h*(1-(val-yMin)/(yMax-yMin));
+    y=Math.max(1,Math.min(h-1,y));
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // Remplissage sous la courbe
+  ctx.fillStyle=color+'22';
+  var midYf=midLine?h*(1-(0-yMin)/(yMax-yMin)):h;
+  ctx.lineTo(w,midYf); ctx.lineTo(0,midYf); ctx.closePath(); ctx.fill();
+}
+
+// ─── COMPARAISON ───
+function tlDrawCompare(){
+  var id1=document.getElementById('tlCompSess1').value;
+  var id2=document.getElementById('tlCompSess2').value;
+  var area=document.getElementById('tlCompareArea');
+  if(!id1||!id2){area.innerHTML='<div class="empty-state"><div class="empty-icon">⚡</div><div class="empty-text">Sélectionnez deux sessions</div></div>';return;}
+  var s1=tlGetSession(id1), s2=tlGetSession(id2);
+  if(!s1||!s2) return;
+
+  // Tableau comparatif
+  var rows=[
+    {label:'Durée',v1:Math.floor((s1.duration||0)/60)+'m'+Math.round((s1.duration||0)%60)+'s',v2:Math.floor((s2.duration||0)/60)+'m'+Math.round((s2.duration||0)%60)+'s',better:'lower'},
+    {label:'Vitesse max',v1:s1.maxSpeed+' km/h',v2:s2.maxSpeed+' km/h',n1:s1.maxSpeed,n2:s2.maxSpeed,better:'higher'},
+    {label:'G Latéral max',v1:s1.maxGLat.toFixed(2)+'G',v2:s2.maxGLat.toFixed(2)+'G',n1:s1.maxGLat,n2:s2.maxGLat,better:'higher'},
+    {label:'G Frein max',v1:s1.maxGLong.toFixed(2)+'G',v2:s2.maxGLong.toFixed(2)+'G',n1:s1.maxGLong,n2:s2.maxGLong,better:'higher'},
+  ];
+
+  var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">'
+    +'<div style="background:#001a2a;border:1px solid var(--blue);border-radius:5px;padding:8px 10px;text-align:center;font-size:12px;font-weight:700;color:var(--blue);">A — '+s1.name+'</div>'
+    +'<div style="background:#1a0900;border:1px solid var(--orange);border-radius:5px;padding:8px 10px;text-align:center;font-size:12px;font-weight:700;color:var(--orange);">B — '+s2.name+'</div>'
+    +'</div>';
+
+  html+='<table style="width:100%;border-collapse:collapse;">';
+  rows.forEach(function(r){
+    var aWin=r.n1!==undefined?(r.better==='higher'?r.n1>r.n2:r.n1<r.n2):false;
+    var bWin=r.n1!==undefined?(r.better==='higher'?r.n2>r.n1:r.n2<r.n1):false;
+    html+='<tr style="border-bottom:1px solid var(--border);">'
+      +'<td style="padding:8px 6px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">'+r.label+'</td>'
+      +'<td style="padding:8px 6px;font-family:Share Tech Mono,monospace;font-size:15px;text-align:center;color:'+(aWin?'var(--green)':'var(--text)')+';">'+(aWin?'🏆 ':'')+r.v1+'</td>'
+      +'<td style="padding:8px 6px;font-family:Share Tech Mono,monospace;font-size:15px;text-align:center;color:'+(bWin?'var(--green)':'var(--text)')+';">'+(bWin?'🏆 ':'')+r.v2+'</td>'
+      +'</tr>';
+  });
+  html+='</table>';
+
+  // Graphiques superposés
+  html+='<div style="margin-top:14px;">'
+    +'<div class="tl-chart-title" style="margin-bottom:5px;">Vitesse superposée (bleu=A / orange=B)</div>'
+    +'<div class="tl-canvas-wrap"><canvas id="cvCompSpeed" height="130"></canvas></div></div>'
+    +'<div style="margin-top:10px;">'
+    +'<div class="tl-chart-title" style="margin-bottom:5px;">G Latéral superposé</div>'
+    +'<div class="tl-canvas-wrap"><canvas id="cvCompGlat" height="110"></canvas></div></div>';
+
+  area.innerHTML=html;
+  setTimeout(function(){
+    tlDrawCompareChart('cvCompSpeed','spd',s1.points,s2.points,'#00aaff','#ff6b00',0,Math.max(s1.maxSpeed,s2.maxSpeed)*1.1);
+    tlDrawCompareChart('cvCompGlat','lat',s1.points,s2.points,'#00aaff','#ff6b00',-2,2);
+  },50);
+}
+
+function tlDrawCompareChart(canvasId,key,pts1,pts2,c1,c2,yMin,yMax){
+  var cv=document.getElementById(canvasId); if(!cv) return;
+  cv.width=cv.parentElement.offsetWidth;
+  var h=cv.height,w=cv.width,ctx=cv.getContext('2d');
+  ctx.fillStyle='#1a1a1a'; ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle='#2a2a2a'; ctx.lineWidth=1;
+  for(var gy=0;gy<=4;gy++){var y=h*gy/4;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+  [pts1,pts2].forEach(function(pts,pi){
+    if(!pts||!pts.length) return;
+    var col=pi===0?c1:c2;
+    var maxT=pts[pts.length-1].t||1;
+    ctx.strokeStyle=col; ctx.lineWidth=2; ctx.lineJoin='round'; ctx.globalAlpha=0.85;
+    ctx.beginPath();
+    pts.forEach(function(p,i){
+      var x=(p.t/maxT)*w,val=p[key]||0;
+      var y=h*(1-(val-yMin)/(yMax-yMin));
+      y=Math.max(1,Math.min(h-1,y));
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke(); ctx.globalAlpha=1;
+  });
+}
+</script>
+
+</body>
+</html>
