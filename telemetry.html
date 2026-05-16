@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>APEX TELEMETRY</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #080c10;
+    --bg2: #0d1117;
+    --bg3: #111820;
+    --panel: #0a0f14;
+    --border: #1a2535;
+    --accent: #00d4ff;
+    --accent2: #ff3d5a;
+    --accent3: #39ff14;
+    --accent4: #ffaa00;
+    --dim: #2a3a4a;
+    --text: #c8d8e8;
+    --text-dim: #4a6070;
+    --red: #ff3d5a;
+    --green: #39ff14;
+    --yellow: #ffaa00;
+    --blue: #00d4ff;
+    --purple: #bd00ff;
+    --glow: 0 0 20px rgba(0,212,255,0.3);
+    --glow-red: 0 0 20px rgba(255,61,90,0.4);
+    --glow-green: 0 0 20px rgba(57,255,20,0.3);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'Rajdhani',sans-serif; }
+  body { display:flex; flex-direction:column; }
+
+  /* HEADER */
+  header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 16px; background:var(--bg2);
+    border-bottom:1px solid var(--border);
+    position:relative; z-index:100; flex-shrink:0;
+  }
+  .logo {
+    font-family:'Orbitron',sans-serif; font-weight:900; font-size:1.3rem;
+    color:var(--accent); letter-spacing:0.2em;
+    text-shadow: 0 0 20px rgba(0,212,255,0.6);
+  }
+  .logo span { color:var(--accent2); }
+  .header-center { display:flex; gap:4px; }
+  .tab-btn {
+    background:transparent; border:1px solid var(--border);
+    color:var(--text-dim); padding:6px 14px; cursor:pointer;
+    font-family:'Rajdhani',sans-serif; font-weight:600; font-size:0.85rem;
+    letter-spacing:0.1em; text-transform:uppercase; transition:all 0.2s;
+  }
+  .tab-btn.active { background:rgba(0,212,255,0.1); border-color:var(--accent); color:var(--accent); }
+  .tab-btn:hover:not(.active) { border-color:var(--dim); color:var(--text); }
+  .header-right { display:flex; align-items:center; gap:10px; }
+  .status-dot { width:8px; height:8px; border-radius:50%; background:var(--dim); }
+  .status-dot.active { background:var(--green); box-shadow:0 0 8px var(--green); animation:blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .timer-display {
+    font-family:'Share Tech Mono',monospace; font-size:1.1rem;
+    color:var(--accent); letter-spacing:0.1em;
+  }
+  .rec-btn {
+    background:var(--red); border:none; color:#fff; padding:6px 16px;
+    cursor:pointer; font-family:'Rajdhani',sans-serif; font-weight:700;
+    font-size:0.85rem; letter-spacing:0.15em; text-transform:uppercase;
+    transition:all 0.2s; clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);
+  }
+  .rec-btn:hover { background:#ff6070; }
+  .rec-btn.recording { background:#ff0020; animation:pulse-rec 1s infinite; }
+  @keyframes pulse-rec { 0%,100%{box-shadow:0 0 0 0 rgba(255,0,32,0.5)} 50%{box-shadow:0 0 0 8px rgba(255,0,32,0)} }
+
+  /* MAIN LAYOUT */
+  .main { display:flex; flex:1; overflow:hidden; }
+
+  /* LEFT GAUGES */
+  .left-panel {
+    width:220px; flex-shrink:0; background:var(--panel);
+    border-right:1px solid var(--border);
+    display:flex; flex-direction:column; gap:1px; overflow-y:auto;
+  }
+
+  .gauge-cell {
+    padding:10px 12px; border-bottom:1px solid var(--border);
+    position:relative;
+  }
+  .gauge-label {
+    font-size:0.65rem; letter-spacing:0.15em; text-transform:uppercase;
+    color:var(--text-dim); margin-bottom:4px;
+  }
+  .gauge-value {
+    font-family:'Share Tech Mono',monospace; font-size:1.6rem;
+    font-weight:700; color:var(--accent); line-height:1;
+  }
+  .gauge-unit { font-size:0.7rem; color:var(--text-dim); margin-left:3px; }
+  .gauge-bar-track {
+    height:3px; background:var(--border); margin-top:6px; position:relative;
+  }
+  .gauge-bar-fill {
+    height:100%; background:var(--accent); transition:width 0.15s;
+    position:relative;
+  }
+  .gauge-bar-fill::after {
+    content:''; position:absolute; right:-1px; top:-3px;
+    width:3px; height:9px; background:inherit;
+  }
+  .gauge-value.warn { color:var(--yellow); }
+  .gauge-value.danger { color:var(--red); text-shadow:var(--glow-red); }
+  .gauge-bar-fill.warn { background:var(--yellow); }
+  .gauge-bar-fill.danger { background:var(--red); }
+  .gauge-bar-fill.positive { background:var(--green); }
+
+  /* G-METER */
+  .g-meter-container {
+    display:flex; align-items:center; justify-content:center;
+    padding:12px;
+  }
+  .g-meter-canvas { width:100%; max-width:190px; }
+
+  /* CENTER */
+  .center-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+  /* MAP */
+  #map-container {
+    flex:1; position:relative; min-height:0;
+  }
+  #map { width:100%; height:100%; }
+  .map-overlay {
+    position:absolute; top:10px; left:10px; z-index:500;
+    display:flex; gap:8px; flex-direction:column;
+  }
+  .map-stat {
+    background:rgba(8,12,16,0.85); border:1px solid var(--border);
+    padding:6px 10px; backdrop-filter:blur(4px);
+  }
+  .map-stat-label { font-size:0.6rem; letter-spacing:0.15em; color:var(--text-dim); text-transform:uppercase; }
+  .map-stat-val { font-family:'Share Tech Mono',monospace; font-size:1rem; color:var(--accent); }
+
+  /* CHARTS PANEL */
+  .charts-panel {
+    height:200px; flex-shrink:0; background:var(--bg2);
+    border-top:1px solid var(--border); display:flex; overflow:hidden;
+  }
+  .chart-wrapper {
+    flex:1; border-right:1px solid var(--border); padding:6px 8px;
+    display:flex; flex-direction:column; min-width:0;
+  }
+  .chart-wrapper:last-child { border-right:none; }
+  .chart-title {
+    font-size:0.6rem; letter-spacing:0.15em; text-transform:uppercase;
+    color:var(--text-dim); margin-bottom:4px; flex-shrink:0;
+  }
+  .chart-wrapper canvas { flex:1; min-height:0; }
+
+  /* RIGHT PANEL */
+  .right-panel {
+    width:260px; flex-shrink:0; background:var(--panel);
+    border-left:1px solid var(--border);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .right-section { padding:10px 12px; border-bottom:1px solid var(--border); }
+  .section-title {
+    font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase;
+    color:var(--accent); margin-bottom:8px; display:flex; align-items:center; gap:6px;
+  }
+  .section-title::before {
+    content:''; width:12px; height:1px; background:var(--accent);
+  }
+
+  /* SESSION LIST */
+  .sessions-list { flex:1; overflow-y:auto; }
+  .session-item {
+    padding:8px 12px; border-bottom:1px solid var(--border);
+    cursor:pointer; transition:background 0.15s; display:flex;
+    align-items:center; gap:8px;
+  }
+  .session-item:hover { background:rgba(0,212,255,0.05); }
+  .session-item.active { background:rgba(0,212,255,0.08); border-left:2px solid var(--accent); }
+  .session-item.compare { background:rgba(255,170,0,0.08); border-left:2px solid var(--yellow); }
+  .session-dot { width:6px; height:6px; border-radius:50%; background:var(--dim); flex-shrink:0; }
+  .session-item.active .session-dot { background:var(--green); }
+  .session-item.compare .session-dot { background:var(--yellow); }
+  .session-info { flex:1; min-width:0; }
+  .session-name { font-size:0.8rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .session-meta { font-size:0.65rem; color:var(--text-dim); font-family:'Share Tech Mono',monospace; }
+  .session-actions { display:flex; gap:4px; }
+  .s-btn {
+    background:transparent; border:1px solid var(--border);
+    color:var(--text-dim); padding:2px 6px; font-size:0.65rem;
+    cursor:pointer; font-family:'Rajdhani',sans-serif;
+    text-transform:uppercase; transition:all 0.15s;
+  }
+  .s-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .s-btn.del:hover { border-color:var(--red); color:var(--red); }
+
+  /* COMPARISON */
+  .compare-panel { padding:10px 12px; flex-shrink:0; }
+  .compare-row {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:4px 0; border-bottom:1px solid rgba(26,37,53,0.5); font-size:0.78rem;
+  }
+  .compare-label { color:var(--text-dim); font-size:0.65rem; text-transform:uppercase; letter-spacing:0.1em; }
+  .compare-a { color:var(--accent); font-family:'Share Tech Mono',monospace; }
+  .compare-b { color:var(--yellow); font-family:'Share Tech Mono',monospace; }
+  .compare-delta { font-family:'Share Tech Mono',monospace; font-size:0.7rem; }
+  .compare-delta.pos { color:var(--green); }
+  .compare-delta.neg { color:var(--red); }
+
+  /* TABS CONTENT */
+  .tab-content { display:none; flex:1; overflow:hidden; }
+  .tab-content.active { display:flex; }
+
+  /* SETTINGS */
+  .settings-panel {
+    flex:1; overflow-y:auto; padding:20px;
+    display:flex; gap:20px; flex-wrap:wrap; align-content:flex-start;
+  }
+  .settings-card {
+    background:var(--bg2); border:1px solid var(--border);
+    padding:16px; min-width:280px; flex:1;
+  }
+  .settings-card h3 { font-family:'Orbitron',sans-serif; font-size:0.8rem; color:var(--accent); letter-spacing:0.15em; margin-bottom:12px; }
+  .setting-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); }
+  .setting-label { font-size:0.8rem; color:var(--text); }
+  .setting-val { font-family:'Share Tech Mono',monospace; font-size:0.8rem; color:var(--accent); }
+  .toggle {
+    width:36px; height:18px; background:var(--border); border-radius:9px;
+    cursor:pointer; position:relative; transition:background 0.2s;
+  }
+  .toggle.on { background:var(--accent); }
+  .toggle::after {
+    content:''; position:absolute; top:2px; left:2px;
+    width:14px; height:14px; border-radius:50%; background:#fff;
+    transition:transform 0.2s;
+  }
+  .toggle.on::after { transform:translateX(18px); }
+
+  /* SENSOR PERMISSION */
+  .permission-overlay {
+    position:fixed; inset:0; background:rgba(8,12,16,0.95);
+    display:flex; align-items:center; justify-content:center;
+    z-index:9999; flex-direction:column; gap:20px; text-align:center;
+    padding:40px;
+  }
+  .permission-overlay h2 { font-family:'Orbitron',sans-serif; color:var(--accent); font-size:1.5rem; letter-spacing:0.2em; }
+  .permission-overlay p { color:var(--text-dim); max-width:400px; line-height:1.6; }
+  .perm-btn {
+    background:var(--accent); border:none; color:var(--bg);
+    padding:12px 32px; font-family:'Rajdhani',sans-serif;
+    font-weight:700; font-size:1rem; letter-spacing:0.15em;
+    text-transform:uppercase; cursor:pointer; transition:all 0.2s;
+    clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%);
+  }
+  .perm-btn:hover { background:#33ddff; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--dim); border-radius:2px; }
+
+  /* ANALYSIS TAB */
+  .analysis-grid {
+    flex:1; display:grid; grid-template-columns:1fr 1fr;
+    grid-template-rows:1fr 1fr; gap:1px; background:var(--border);
+    overflow:hidden;
+  }
+  .analysis-chart {
+    background:var(--panel); padding:12px; display:flex; flex-direction:column;
+  }
+  .analysis-chart-title { font-size:0.65rem; letter-spacing:0.15em; color:var(--text-dim); margin-bottom:8px; text-transform:uppercase; }
+  .analysis-chart canvas { flex:1; min-height:0; }
+
+  .no-sessions {
+    padding:20px; color:var(--text-dim); font-size:0.8rem; text-align:center;
+    letter-spacing:0.1em;
+  }
+
+  /* Leaflet dark overrides */
+  .leaflet-tile-pane { filter:invert(1) hue-rotate(180deg) brightness(0.8) contrast(1.1); }
+  .leaflet-control-zoom a { background:var(--bg2)!important; color:var(--accent)!important; border-color:var(--border)!important; }
+  .leaflet-popup-content-wrapper { background:var(--bg2); color:var(--text); border:1px solid var(--border); border-radius:0; }
+  .leaflet-popup-tip { background:var(--bg2); }
+</style>
+</head>
+<body>
+
+<!-- PERMISSION OVERLAY -->
+<div class="permission-overlay" id="permOverlay">
+  <div style="font-family:'Orbitron',sans-serif;font-size:2rem;color:var(--accent);text-shadow:0 0 40px rgba(0,212,255,0.5);">⬡</div>
+  <h2>APEX TELEMETRY</h2>
+  <p>Autorisez l'accès aux capteurs du téléphone (gyroscope, accéléromètre, GPS) pour démarrer la télémétrie en temps réel.</p>
+  <button class="perm-btn" onclick="requestPermissions()">AUTORISER LES CAPTEURS</button>
+  <p style="font-size:0.75rem;color:var(--text-dim);margin-top:-10px;">Sur iOS 13+, une autorisation explicite est requise</p>
+</div>
+
+<header>
+  <div class="logo">APEX<span>●</span>TEL</div>
+  <div class="header-center">
+    <button class="tab-btn active" onclick="switchTab('live')">LIVE</button>
+    <button class="tab-btn" onclick="switchTab('analyse')">ANALYSE</button>
+    <button class="tab-btn" onclick="switchTab('settings')">CONFIG</button>
+  </div>
+  <div class="header-right">
+    <div class="status-dot" id="sensorDot"></div>
+    <div class="timer-display" id="timerDisplay">00:00:00</div>
+    <button class="rec-btn" id="recBtn" onclick="toggleRecording()">⏺ REC</button>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- ===== LIVE TAB ===== -->
+  <div class="tab-content active" id="tab-live">
+
+    <!-- LEFT GAUGES -->
+    <div class="left-panel">
+      <div class="gauge-cell">
+        <div class="gauge-label">Vitesse</div>
+        <div class="gauge-value" id="g-speed">0<span class="gauge-unit">km/h</span></div>
+        <div class="gauge-bar-track"><div class="gauge-bar-fill" id="b-speed" style="width:0%"></div></div>
+      </div>
+      <div class="gauge-cell">
+        <div class="gauge-label">G Latéral</div>
+        <div class="gauge-value" id="g-glat">0.00<span class="gauge-unit">G</span></div>
+        <div class="gauge-bar-track" style="position:relative;overflow:visible">
+          <div style="position:absolute;left:50%;top:0;width:1px;height:100%;background:var(--dim)"></div>
+          <div class="gauge-bar-fill" id="b-glat" style="width:0%;margin-left:50%;background:var(--accent2)"></div>
+        </div>
+      </div>
+      <div class="gauge-cell">
+        <div class="gauge-label">G Longitudinal</div>
+        <div class="gauge-value" id="g-glon">0.00<span class="gauge-unit">G</span></div>
+        <div class="gauge-bar-track" style="position:relative;overflow:visible">
+          <div style="position:absolute;left:50%;top:0;width:1px;height:100%;background:var(--dim)"></div>
+          <div class="gauge-bar-fill positive" id="b-glon" style="width:0%;margin-left:50%"></div>
+        </div>
+      </div>
+      <div class="gauge-cell">
+        <div class="gauge-label">Tangage (Pitch)</div>
+        <div class="gauge-value" id="g-pitch">0.0<span class="gauge-unit">°</span></div>
+        <div class="gauge-bar-track"><div class="gauge-bar-fill" id="b-pitch" style="width:0%"></div></div>
+      </div>
+      <div class="gauge-cell">
+        <div class="gauge-label">Roulis (Roll)</div>
+        <div class="gauge-value" id="g-roll">0.0<span class="gauge-unit">°</span></div>
+        <div class="gauge-bar-track"><div class="gauge-bar-fill" id="b-roll" style="width:50%;background:var(--purple)"></div></div>
+      </div>
+      <div class="gauge-cell">
+        <div class="gauge-label">Lacet (Yaw Rate)</div>
+        <div class="gauge-value" id="g-yaw">0.0<span class="gauge-unit">°/s</span></div>
+        <div class="gauge-bar-track"><div class="gauge-bar-fill" id="b-yaw" style="width:0%;background:var(--yellow)"></div></div>
+      </div>
+      <div class="gauge-cell">
+        <div class="gauge-label">Altitude GPS</div>
+        <div class="gauge-value" id="g-alt">---<span class="gauge-unit">m</span></div>
+      </div>
+      <div class="gauge-cell">
+        <div class="gauge-label">Précision GPS</div>
+        <div class="gauge-value" id="g-acc" style="font-size:1.1rem">---<span class="gauge-unit">m</span></div>
+      </div>
+
+      <!-- G-METER CIRCLE -->
+      <div class="g-meter-container">
+        <canvas id="gMeterCanvas" class="g-meter-canvas" width="190" height="190"></canvas>
+      </div>
+      <div style="text-align:center;padding:4px 0 8px;font-size:0.6rem;letter-spacing:0.15em;color:var(--text-dim)">G-METER</div>
+
+      <div class="gauge-cell">
+        <div class="gauge-label">G Max Lat</div>
+        <div class="gauge-value" style="color:var(--accent2)" id="g-maxlat">0.00<span class="gauge-unit">G</span></div>
+      </div>
+      <div class="gauge-cell">
+        <div class="gauge-label">G Max Lon</div>
+        <div class="gauge-value" style="color:var(--green)" id="g-maxlon">0.00<span class="gauge-unit">G</span></div>
+      </div>
+      <div class="gauge-cell">
+        <div class="gauge-label">Vit. Max</div>
+        <div class="gauge-value" id="g-maxspd">0<span class="gauge-unit">km/h</span></div>
+      </div>
+      <div class="gauge-cell">
+        <div class="gauge-label">Distance</div>
+        <div class="gauge-value" id="g-dist">0.0<span class="gauge-unit">km</span></div>
+      </div>
+    </div>
+
+    <!-- CENTER -->
+    <div class="center-panel">
+      <div id="map-container">
+        <div id="map"></div>
+        <div class="map-overlay">
+          <div class="map-stat">
+            <div class="map-stat-label">Latitude</div>
+            <div class="map-stat-val" id="m-lat">--.---------</div>
+          </div>
+          <div class="map-stat">
+            <div class="map-stat-label">Longitude</div>
+            <div class="map-stat-val" id="m-lon">--.---------</div>
+          </div>
+          <div class="map-stat">
+            <div class="map-stat-label">Cap</div>
+            <div class="map-stat-val" id="m-head">---°</div>
+          </div>
+        </div>
+      </div>
+      <div class="charts-panel">
+        <div class="chart-wrapper">
+          <div class="chart-title">● Vitesse km/h</div>
+          <canvas id="chartSpeed"></canvas>
+        </div>
+        <div class="chart-wrapper">
+          <div class="chart-title" style="color:#ff3d5a">● G Latéral</div>
+          <canvas id="chartGlat"></canvas>
+        </div>
+        <div class="chart-wrapper">
+          <div class="chart-title" style="color:#39ff14">● G Longitudinal</div>
+          <canvas id="chartGlon"></canvas>
+        </div>
+        <div class="chart-wrapper">
+          <div class="chart-title" style="color:#bd00ff">● Roulis / Tangage</div>
+          <canvas id="chartAngles"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+      <div class="right-section">
+        <div class="section-title">Sessions</div>
+        <button onclick="newSession()" style="width:100%;background:transparent;border:1px solid var(--accent);color:var(--accent);padding:6px;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:0.8rem;letter-spacing:0.1em;cursor:pointer;text-transform:uppercase;transition:all 0.2s;" onmouseover="this.style.background='rgba(0,212,255,0.1)'" onmouseout="this.style.background='transparent'">+ NOUVELLE SESSION</button>
+      </div>
+      <div class="sessions-list" id="sessionsList"></div>
+      <div class="right-section" id="compareSection" style="display:none">
+        <div class="section-title">Comparaison</div>
+        <div id="compareContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ANALYSE TAB ===== -->
+  <div class="tab-content" id="tab-analyse">
+    <div class="analysis-grid" id="analysisGrid">
+      <div class="analysis-chart">
+        <div class="analysis-chart-title">Vitesse — Session complète</div>
+        <canvas id="anSpeed"></canvas>
+      </div>
+      <div class="analysis-chart">
+        <div class="analysis-chart-title">Forces G Latéral & Longitudinal</div>
+        <canvas id="anG"></canvas>
+      </div>
+      <div class="analysis-chart">
+        <div class="analysis-chart-title">Tangage & Roulis</div>
+        <canvas id="anAngles"></canvas>
+      </div>
+      <div class="analysis-chart">
+        <div class="analysis-chart-title">Scatter G-G (enveloppe dynamique)</div>
+        <canvas id="anGG"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SETTINGS TAB ===== -->
+  <div class="tab-content" id="tab-settings">
+    <div class="settings-panel">
+      <div class="settings-card">
+        <h3>Capteurs</h3>
+        <div class="setting-row"><span class="setting-label">Accéléromètre</span><div class="toggle on" id="tog-accel" onclick="toggleSetting(this)"></div></div>
+        <div class="setting-row"><span class="setting-label">Gyroscope</span><div class="toggle on" id="tog-gyro" onclick="toggleSetting(this)"></div></div>
+        <div class="setting-row"><span class="setting-label">GPS</span><div class="toggle on" id="tog-gps" onclick="toggleSetting(this)"></div></div>
+        <div class="setting-row"><span class="setting-label">Fréquence capteur</span><span class="setting-val">50 Hz</span></div>
+        <div class="setting-row"><span class="setting-label">Fréquence GPS</span><span class="setting-val">1 Hz</span></div>
+      </div>
+      <div class="settings-card">
+        <h3>Filtrage</h3>
+        <div class="setting-row"><span class="setting-label">Filtre passe-bas</span><div class="toggle on" onclick="toggleSetting(this)"></div></div>
+        <div class="setting-row"><span class="setting-label">Coeff. lissage</span><span class="setting-val">0.15</span></div>
+        <div class="setting-row"><span class="setting-label">Compensation gravité</span><div class="toggle on" onclick="toggleSetting(this)"></div></div>
+      </div>
+      <div class="settings-card">
+        <h3>Affichage</h3>
+        <div class="setting-row"><span class="setting-label">Fenêtre graphiques (s)</span><span class="setting-val" id="set-window">60</span></div>
+        <div class="setting-row"><span class="setting-label">Unité vitesse</span><span class="setting-val">km/h</span></div>
+        <div class="setting-row"><span class="setting-label">Tracé GPS temps réel</span><div class="toggle on" onclick="toggleSetting(this)"></div></div>
+      </div>
+      <div class="settings-card">
+        <h3>Stockage</h3>
+        <div class="setting-row"><span class="setting-label">Auto-save</span><div class="toggle on" onclick="toggleSetting(this)"></div></div>
+        <div class="setting-row"><span class="setting-label">Sessions stockées</span><span class="setting-val" id="set-count">0</span></div>
+        <div class="setting-row"><span class="setting-label">Taille totale</span><span class="setting-val" id="set-size">0 KB</span></div>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button onclick="exportCSV()" style="flex:1;background:transparent;border:1px solid var(--accent);color:var(--accent);padding:8px;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:0.75rem;letter-spacing:0.1em;cursor:pointer;text-transform:uppercase;">EXPORT CSV</button>
+          <button onclick="clearAll()" style="flex:1;background:transparent;border:1px solid var(--red);color:var(--red);padding:8px;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:0.75rem;letter-spacing:0.1em;cursor:pointer;text-transform:uppercase;">TOUT EFFACER</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== STATE ==========
+const MAX_POINTS = 600;
+const CHART_WINDOW = 60; // seconds shown
+
+let isRecording = false;
+let recordingStart = null;
+let timerInterval = null;
+let sessions = [];
+let currentSession = null;
+let activeSessionIdx = -1;
+let compareSessionIdx = -1;
+let gpsWatchId = null;
+
+// Sensor data (live)
+let live = {
+  speed: 0, glat: 0, glon: 0, pitch: 0, roll: 0, yaw: 0,
+  lat: null, lon: null, alt: 0, acc: 0, heading: 0,
+  maxLat: 0, maxLon: 0, maxSpd: 0, dist: 0, lastLat: null, lastLon: null
+};
+
+// Raw sensor (with filtering)
+let rawAx = 0, rawAy = 0, rawAz = 0;
+let rawGx = 0, rawGy = 0, rawGz = 0;
+const ALPHA = 0.15; // low-pass
+
+// Chart buffers
+let bufs = {
+  speed: [], glat: [], glon: [], pitch: [], roll: [], yaw: [], t: []
+};
+
+// ========== PERMISSIONS ==========
+async function requestPermissions() {
+  // iOS DeviceMotion permission
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+    try {
+      const res = await DeviceMotionEvent.requestPermission();
+      if (res !== 'granted') { alert('Permission accéléromètre refusée'); return; }
+    } catch(e) { console.warn(e); }
+  }
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try { await DeviceOrientationEvent.requestPermission(); } catch(e) {}
+  }
+  document.getElementById('permOverlay').style.display = 'none';
+  initSensors();
+  initMap();
+  initCharts();
+  initGPS();
+  renderSessions();
+  requestAnimationFrame(uiLoop);
+}
+
+// ========== SENSORS ==========
+function initSensors() {
+  window.addEventListener('devicemotion', onMotion, { passive: true });
+  window.addEventListener('deviceorientation', onOrientation, { passive: true });
+  document.getElementById('sensorDot').classList.add('active');
+}
+
+function onMotion(e) {
+  const acc = e.accelerationIncludingGravity || e.acceleration || {};
+  const rot = e.rotationRate || {};
+  const ax = acc.x || 0, ay = acc.y || 0, az = acc.z || 0;
+  const gx = rot.beta || 0, gy = rot.gamma || 0, gz = rot.alpha || 0;
+
+  // Low-pass filter
+  rawAx = rawAx + ALPHA * (ax - rawAx);
+  rawAy = rawAy + ALPHA * (ay - rawAy);
+  rawAz = rawAz + ALPHA * (az - rawAz);
+  rawGx = rawGx + ALPHA * (gx - rawGx);
+  rawGy = rawGy + ALPHA * (gy - rawGy);
+  rawGz = rawGz + ALPHA * (gz - rawGz);
+
+  live.glat = rawAx / 9.81;
+  live.glon = rawAy / 9.81;
+  live.yaw = rawGz;
+
+  if (Math.abs(live.glat) > live.maxLat) live.maxLat = Math.abs(live.glat);
+  if (Math.abs(live.glon) > live.maxLon) live.maxLon = Math.abs(live.glon);
+}
+
+function onOrientation(e) {
+  live.pitch = e.beta || 0;
+  live.roll = e.gamma || 0;
+}
+
+// ========== GPS ==========
+function initGPS() {
+  if (!navigator.geolocation) return;
+  gpsWatchId = navigator.geolocation.watchPosition(onGPS, err => console.warn(err), {
+    enableHighAccuracy: true, maximumAge: 1000, timeout: 5000
+  });
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
+  const Δφ = (lat2-lat1)*Math.PI/180, Δλ = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function onGPS(pos) {
+  const { latitude: lat, longitude: lon, altitude, accuracy, heading, speed } = pos.coords;
+  live.lat = lat; live.lon = lon;
+  live.alt = altitude ? Math.round(altitude) : 0;
+  live.acc = Math.round(accuracy);
+  live.heading = heading || 0;
+
+  // Speed from GPS if available, else keep sensor
+  if (speed !== null && speed !== undefined) {
+    live.speed = speed * 3.6;
+  }
+  if (live.speed > live.maxSpd) live.maxSpd = live.speed;
+
+  // Distance
+  if (live.lastLat !== null) {
+    live.dist += haversine(live.lastLat, live.lastLon, lat, lon) / 1000;
+  }
+  live.lastLat = lat; live.lastLon = lon;
+
+  // Update map
+  updateMapPosition(lat, lon);
+
+  // Record GPS point
+  if (isRecording && currentSession) {
+    currentSession.gps.push({ lat, lon, t: Date.now() });
+    updateGPSPath();
+  }
+}
+
+// ========== MAP ==========
+let map, marker, gpsPolyline, gpsDots;
+let gpsPathCoords = [];
+
+function initMap() {
+  map = L.map('map', { zoomControl:true, attributionControl:false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  map.setView([48.8566, 2.3522], 15);
+
+  gpsPolyline = L.polyline([], { color:'#00d4ff', weight:3, opacity:0.85 }).addTo(map);
+
+  const icon = L.divIcon({
+    className:'',
+    html:`<div style="width:16px;height:16px;background:#00d4ff;border:2px solid #fff;border-radius:50%;box-shadow:0 0 12px #00d4ff;"></div>`,
+    iconSize:[16,16], iconAnchor:[8,8]
+  });
+  marker = L.marker([48.8566, 2.3522], { icon }).addTo(map);
+}
+
+function updateMapPosition(lat, lon) {
+  if (!map) return;
+  marker.setLatLng([lat, lon]);
+  map.panTo([lat, lon], { animate: true, duration: 0.5 });
+  if (isRecording) {
+    gpsPathCoords.push([lat, lon]);
+    gpsPolyline.setLatLngs(gpsPathCoords);
+  }
+}
+
+function updateGPSPath() {}
+
+// ========== CHARTS ==========
+let charts = {};
+
+function makeChart(id, label, color, min, max, multi) {
+  const ctx = document.getElementById(id).getContext('2d');
+  const ds = multi
+    ? [
+        { label: multi[0].l, data: [], borderColor: multi[0].c, borderWidth:1.5, fill:false, pointRadius:0, tension:0.3 },
+        { label: multi[1].l, data: [], borderColor: multi[1].c, borderWidth:1.5, fill:false, pointRadius:0, tension:0.3 }
+      ]
+    : [{ label, data: [], borderColor: color, borderWidth:1.5,
+         fill: true,
+         backgroundColor: ctx => {
+           const g = ctx.chart.ctx.createLinearGradient(0,0,0,ctx.chart.height);
+           g.addColorStop(0, color+'44'); g.addColorStop(1, color+'00'); return g;
+         },
+         pointRadius:0, tension:0.3 }];
+  return new Chart(ctx, {
+    type:'line',
+    data: { labels: [], datasets: ds },
+    options: {
+      animation: false, responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: !!multi, labels: { color:'#4a6070', font: { family:'Share Tech Mono', size:9 }, boxWidth:10 } } },
+      scales: {
+        x: { display:false },
+        y: {
+          min: min, max: max,
+          grid: { color:'rgba(26,37,53,0.6)', lineWidth:1 },
+          ticks: { color:'#4a6070', font:{ family:'Share Tech Mono', size:9 }, maxTicksLimit:5 }
+        }
+      }
+    }
+  });
+}
+
+function initCharts() {
+  charts.speed = makeChart('chartSpeed', 'Vitesse', '#00d4ff', 0, 200);
+  charts.glat  = makeChart('chartGlat',  'G Lat',   '#ff3d5a', -3, 3);
+  charts.glon  = makeChart('chartGlon',  'G Lon',   '#39ff14', -3, 3);
+  charts.angles= makeChart('chartAngles',null, null, -90, 90, [
+    {l:'Roulis', c:'#bd00ff'}, {l:'Tangage', c:'#ffaa00'}
+  ]);
+
+  // Analysis charts
+  charts.anSpeed  = makeChart('anSpeed',  'Vitesse', '#00d4ff', 0, 200);
+  charts.anG      = makeChart('anG', null, null, -3, 3, [{l:'G Lat',c:'#ff3d5a'},{l:'G Lon',c:'#39ff14'}]);
+  charts.anAngles = makeChart('anAngles', null, null, -90,90, [{l:'Roulis',c:'#bd00ff'},{l:'Tangage',c:'#ffaa00'}]);
+
+  // G-G scatter
+  const ctx = document.getElementById('anGG').getContext('2d');
+  charts.anGG = new Chart(ctx, {
+    type:'scatter',
+    data: { datasets: [{ label:'G-G', data:[], backgroundColor:'rgba(0,212,255,0.5)', pointRadius:2 }] },
+    options: {
+      animation:false, responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ min:-3,max:3, grid:{color:'rgba(26,37,53,0.8)'}, ticks:{color:'#4a6070',font:{family:'Share Tech Mono',size:9}}, title:{display:true,text:'G Lat',color:'#4a6070'} },
+        y:{ min:-3,max:3, grid:{color:'rgba(26,37,53,0.8)'}, ticks:{color:'#4a6070',font:{family:'Share Tech Mono',size:9}}, title:{display:true,text:'G Lon',color:'#4a6070'} }
+      }
+    }
+  });
+}
+
+function pushChart(chart, label, ...values) {
+  const labels = chart.data.labels;
+  labels.push(label);
+  values.forEach((v, i) => chart.data.datasets[i].data.push(v));
+  if (labels.length > MAX_POINTS) {
+    labels.shift();
+    values.forEach((_, i) => chart.data.datasets[i].data.shift());
+  }
+  chart.update('none');
+}
+
+// ========== G-METER CANVAS ==========
+let gMeterCtx;
+function initGMeter() {
+  gMeterCtx = document.getElementById('gMeterCanvas').getContext('2d');
+}
+
+function drawGMeter(glat, glon) {
+  if (!gMeterCtx) return;
+  const c = gMeterCtx, w = 190, h = 190, cx = w/2, cy = h/2, r = 80;
+  c.clearRect(0,0,w,h);
+
+  // Background circle
+  c.beginPath(); c.arc(cx,cy,r,0,Math.PI*2);
+  c.fillStyle='#0a0f14'; c.fill();
+  c.strokeStyle='#1a2535'; c.lineWidth=1; c.stroke();
+
+  // Grid circles
+  [0.33,0.67,1].forEach(frac => {
+    c.beginPath(); c.arc(cx,cy,r*frac,0,Math.PI*2);
+    c.strokeStyle='rgba(26,37,53,0.8)'; c.lineWidth=1; c.stroke();
+  });
+  // Axes
+  c.beginPath(); c.moveTo(cx-r,cy); c.lineTo(cx+r,cy);
+  c.moveTo(cx,cy-r); c.lineTo(cx,cy+r);
+  c.strokeStyle='rgba(26,37,53,0.8)'; c.lineWidth=1; c.stroke();
+
+  // Labels
+  c.fillStyle='#2a3a4a'; c.font='8px Share Tech Mono'; c.textAlign='center';
+  c.fillText('1G',cx,cy-r+10); c.fillText('-1G',cx,cy+r-4);
+  c.fillText('-1G',cx-r+5,cy+3); c.fillText('1G',cx+r-5,cy+3);
+
+  // Trail (history)
+  if (gMeterHistory.length > 1) {
+    c.beginPath();
+    gMeterHistory.forEach((p,i) => {
+      const px = cx + p.x*r; const py = cy - p.y*r;
+      i===0 ? c.moveTo(px,py) : c.lineTo(px,py);
+    });
+    c.strokeStyle='rgba(0,212,255,0.2)'; c.lineWidth=1.5; c.stroke();
+  }
+
+  // Dot
+  const dx = cx + Math.max(-1,Math.min(1,glat))*r;
+  const dy = cy - Math.max(-1,Math.min(1,glon))*r;
+
+  // Glow
+  const grd = c.createRadialGradient(dx,dy,0,dx,dy,14);
+  grd.addColorStop(0,'rgba(0,212,255,0.6)'); grd.addColorStop(1,'rgba(0,212,255,0)');
+  c.beginPath(); c.arc(dx,dy,14,0,Math.PI*2);
+  c.fillStyle=grd; c.fill();
+
+  c.beginPath(); c.arc(dx,dy,5,0,Math.PI*2);
+  c.fillStyle='#00d4ff'; c.fill();
+  c.strokeStyle='#fff'; c.lineWidth=1.5; c.stroke();
+}
+
+let gMeterHistory = [];
+function updateGMeterHistory(glat, glon) {
+  gMeterHistory.push({x:glat,y:glon});
+  if(gMeterHistory.length>40) gMeterHistory.shift();
+}
+
+// ========== RECORDING ==========
+function toggleRecording() {
+  if (!isRecording) startRecording();
+  else stopRecording();
+}
+
+function startRecording() {
+  if (activeSessionIdx < 0) { newSession(); }
+  isRecording = true;
+  recordingStart = Date.now();
+  gpsPathCoords = [];
+  if (gpsPolyline) gpsPolyline.setLatLngs([]);
+  live.maxLat=0; live.maxLon=0; live.maxSpd=0; live.dist=0;
+  live.lastLat=null; live.lastLon=null;
+
+  currentSession = sessions[activeSessionIdx];
+  currentSession.data = []; currentSession.gps = [];
+  currentSession.startTime = recordingStart;
+
+  document.getElementById('recBtn').classList.add('recording');
+  document.getElementById('recBtn').textContent = '⏹ STOP';
+
+  timerInterval = setInterval(() => {
+    const elapsed = Date.now() - recordingStart;
+    const h = Math.floor(elapsed/3600000).toString().padStart(2,'0');
+    const m = Math.floor((elapsed%3600000)/60000).toString().padStart(2,'0');
+    const s = Math.floor((elapsed%60000)/1000).toString().padStart(2,'0');
+    document.getElementById('timerDisplay').textContent = `${h}:${m}:${s}`;
+  }, 500);
+}
+
+function stopRecording() {
+  isRecording = false;
+  clearInterval(timerInterval);
+  document.getElementById('recBtn').classList.remove('recording');
+  document.getElementById('recBtn').textContent = '⏺ REC';
+
+  if (currentSession) {
+    currentSession.endTime = Date.now();
+    currentSession.duration = currentSession.endTime - currentSession.startTime;
+    currentSession.maxSpd = live.maxSpd;
+    currentSession.maxLat = live.maxLat;
+    currentSession.maxLon = live.maxLon;
+    currentSession.dist = live.dist;
+    saveSessions();
+    renderSessions();
+    updateSettings();
+  }
+}
+
+function newSession() {
+  const idx = sessions.length;
+  const name = `SESSION_${String(idx+1).padStart(3,'0')}`;
+  sessions.push({ name, data:[], gps:[], startTime:null, endTime:null,
+    duration:0, maxSpd:0, maxLat:0, maxLon:0, dist:0 });
+  activeSessionIdx = idx;
+  saveSessions();
+  renderSessions();
+}
+
+// ========== SESSIONS STORAGE ==========
+function saveSessions() {
+  try {
+    // Only save metadata + compact data (max 1000 pts)
+    const compact = sessions.map(s => ({
+      ...s,
+      data: s.data.length > 1000 ? s.data.filter((_,i)=>i%Math.ceil(s.data.length/1000)===0) : s.data
+    }));
+    localStorage.setItem('apex_sessions', JSON.stringify(compact));
+  } catch(e) { console.warn('Storage full', e); }
+}
+
+function loadSessions() {
+  try {
+    const raw = localStorage.getItem('apex_sessions');
+    if (raw) { sessions = JSON.parse(raw); if(sessions.length>0) activeSessionIdx=sessions.length-1; }
+  } catch(e) {}
+}
+
+function renderSessions() {
+  const el = document.getElementById('sessionsList');
+  if (!sessions.length) { el.innerHTML = '<div class="no-sessions">Aucune session<br>Créez-en une !</div>'; return; }
+  el.innerHTML = sessions.map((s,i) => {
+    const dur = s.duration ? formatDur(s.duration) : '--:--';
+    const dist = s.dist ? s.dist.toFixed(2)+'km' : '0.00km';
+    const cls = i===activeSessionIdx ? 'active' : (i===compareSessionIdx ? 'compare' : '');
+    return `<div class="session-item ${cls}" onclick="selectSession(${i})">
+      <div class="session-dot"></div>
+      <div class="session-info">
+        <div class="session-name">${s.name}</div>
+        <div class="session-meta">${dur} · ${dist} · ${s.maxSpd?s.maxSpd.toFixed(0):0}km/h</div>
+      </div>
+      <div class="session-actions">
+        <button class="s-btn" onclick="event.stopPropagation();compareSession(${i})">CMP</button>
+        <button class="s-btn" onclick="event.stopPropagation();renameSession(${i})">✏</button>
+        <button class="s-btn del" onclick="event.stopPropagation();deleteSession(${i})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function formatDur(ms) {
+  const s=Math.floor(ms/1000), m=Math.floor(s/60), h=Math.floor(m/60);
+  return `${String(h).padStart(2,'0')}:${String(m%60).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+}
+
+function selectSession(i) {
+  activeSessionIdx = i; renderSessions(); loadSessionIntoAnalysis(sessions[i]);
+}
+
+function compareSession(i) {
+  compareSessionIdx = compareSessionIdx === i ? -1 : i;
+  renderSessions(); updateCompare(); loadSessionIntoAnalysis(sessions[activeSessionIdx]);
+}
+
+function renameSession(i) {
+  const name = prompt('Nom de la session:', sessions[i].name);
+  if (name) { sessions[i].name = name; saveSessions(); renderSessions(); }
+}
+
+function deleteSession(i) {
+  if (!confirm(`Supprimer "${sessions[i].name}" ?`)) return;
+  sessions.splice(i,1);
+  if (activeSessionIdx >= sessions.length) activeSessionIdx = sessions.length-1;
+  if (compareSessionIdx >= sessions.length) compareSessionIdx = -1;
+  saveSessions(); renderSessions(); updateSettings();
+}
+
+function updateCompare() {
+  const sec = document.getElementById('compareSection');
+  const cont = document.getElementById('compareContent');
+  if (compareSessionIdx < 0 || activeSessionIdx < 0) { sec.style.display='none'; return; }
+  sec.style.display='block';
+  const a = sessions[activeSessionIdx], b = sessions[compareSessionIdx];
+  const rows = [
+    ['Vit. max', a.maxSpd?.toFixed(1)+'km/h', b.maxSpd?.toFixed(1)+'km/h', a.maxSpd-b.maxSpd],
+    ['G Lat max', a.maxLat?.toFixed(3)+'G', b.maxLat?.toFixed(3)+'G', a.maxLat-b.maxLat],
+    ['G Lon max', a.maxLon?.toFixed(3)+'G', b.maxLon?.toFixed(3)+'G', a.maxLon-b.maxLon],
+    ['Distance', a.dist?.toFixed(2)+'km', b.dist?.toFixed(2)+'km', a.dist-b.dist],
+    ['Durée', formatDur(a.duration||0), formatDur(b.duration||0), null],
+  ];
+  cont.innerHTML = rows.map(([l,av,bv,d]) => `
+    <div class="compare-row">
+      <span class="compare-label">${l}</span>
+      <span class="compare-a">${av||'---'}</span>
+      <span class="compare-b">${bv||'---'}</span>
+      ${d!==null ? `<span class="compare-delta ${d>0?'pos':'neg'}">${d>0?'+':''}${typeof d==='number'?d.toFixed(2):''}</span>` : ''}
+    </div>`).join('');
+}
+
+// ========== ANALYSIS ==========
+function loadSessionIntoAnalysis(s) {
+  if (!s || !s.data || !s.data.length) return;
+  const data = s.data;
+  const labels = data.map((_,i) => i);
+
+  const setData = (chart, ...datasets) => {
+    chart.data.labels = labels;
+    datasets.forEach((d,i) => chart.data.datasets[i].data = d);
+    chart.update();
+  };
+
+  setData(charts.anSpeed, data.map(d=>d.speed));
+  setData(charts.anG, data.map(d=>d.glat), data.map(d=>d.glon));
+  setData(charts.anAngles, data.map(d=>d.roll), data.map(d=>d.pitch));
+
+  // G-G scatter
+  charts.anGG.data.datasets[0].data = data.map(d=>({x:d.glat,y:d.glon}));
+  charts.anGG.update();
+
+  // Draw GPS path on map for this session
+  if (map && s.gps && s.gps.length > 1) {
+    gpsPolyline.setLatLngs(s.gps.map(p=>[p.lat,p.lon]));
+    map.fitBounds(gpsPolyline.getBounds(), {padding:[20,20]});
+  }
+}
+
+// ========== UI LOOP ==========
+let lastSampleTime = 0;
+const SAMPLE_INTERVAL = 200; // ms between data samples
+
+function uiLoop(ts) {
+  // Update gauges
+  setGauge('g-speed', live.speed.toFixed(0), 'b-speed', Math.min(live.speed/200*100,100));
+  setGauge('g-glat', live.glat.toFixed(3), 'b-glat', Math.abs(live.glat)/3*50, live.glat, true);
+  setGauge('g-glon', live.glon.toFixed(3), 'b-glon', Math.abs(live.glon)/3*50, live.glon, true);
+  setGauge('g-pitch', live.pitch.toFixed(1), 'b-pitch', Math.abs(live.pitch)/90*100);
+  setGauge('g-roll', live.roll.toFixed(1), 'b-roll', Math.abs(live.roll)/90*100);
+  setGauge('g-yaw', live.yaw.toFixed(1), 'b-yaw', Math.min(Math.abs(live.yaw)/200*100,100));
+  el('g-alt').innerHTML = `${live.alt}<span class="gauge-unit">m</span>`;
+  el('g-acc').innerHTML = `${live.acc}<span class="gauge-unit">m</span>`;
+  el('g-maxlat').innerHTML = `${live.maxLat.toFixed(3)}<span class="gauge-unit">G</span>`;
+  el('g-maxlon').innerHTML = `${live.maxLon.toFixed(3)}<span class="gauge-unit">G</span>`;
+  el('g-maxspd').innerHTML = `${live.maxSpd.toFixed(0)}<span class="gauge-unit">km/h</span>`;
+  el('g-dist').innerHTML = `${live.dist.toFixed(2)}<span class="gauge-unit">km</span>`;
+
+  if (live.lat) {
+    el('m-lat').textContent = live.lat.toFixed(6);
+    el('m-lon').textContent = live.lon.toFixed(6);
+    el('m-head').textContent = Math.round(live.heading) + '°';
+  }
+
+  // G-meter
+  updateGMeterHistory(live.glat, live.glon);
+  drawGMeter(live.glat, live.glon);
+
+  // Throttled charting & recording
+  if (ts - lastSampleTime >= SAMPLE_INTERVAL) {
+    lastSampleTime = ts;
+    const t = isRecording ? ((Date.now() - (recordingStart||Date.now()))/1000).toFixed(1) : '---';
+    pushChart(charts.speed, t, live.speed);
+    pushChart(charts.glat, t, live.glat);
+    pushChart(charts.glon, t, live.glon);
+    pushChart(charts.angles, t, live.roll, live.pitch);
+
+    if (isRecording && currentSession) {
+      currentSession.data.push({
+        t: Date.now(), speed:live.speed, glat:live.glat, glon:live.glon,
+        pitch:live.pitch, roll:live.roll, yaw:live.yaw,
+        lat:live.lat, lon:live.lon, alt:live.alt
+      });
+    }
+  }
+
+  requestAnimationFrame(uiLoop);
+}
+
+function el(id) { return document.getElementById(id); }
+function setGauge(gId, val, bId, pct, signed, bidir) {
+  const g = el(gId);
+  if (!g) return;
+  const absVal = Math.abs(parseFloat(val)||0);
+  g.className = 'gauge-value' + (absVal>2?'danger':absVal>1?' warn':'');
+  g.innerHTML = val + (g.innerHTML.includes('gauge-unit')?'':'');
+
+  const b = el(bId);
+  if (!b) return;
+  b.style.width = Math.min(pct,50)+'%';
+  b.className = 'gauge-bar-fill' + (absVal>2?' danger':absVal>1?' warn':'');
+  if (signed!==undefined && signed<0 && bidir) {
+    b.style.marginLeft = (50 - Math.min(pct,50))+'%';
+  }
+}
+
+// ========== TABS ==========
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+
+  if (tab==='analyse' && activeSessionIdx>=0) {
+    setTimeout(()=>loadSessionIntoAnalysis(sessions[activeSessionIdx]),100);
+  }
+  if (tab==='settings') updateSettings();
+}
+
+// ========== SETTINGS ==========
+function updateSettings() {
+  el('set-count').textContent = sessions.length;
+  try {
+    const raw = localStorage.getItem('apex_sessions')||'';
+    el('set-size').textContent = (raw.length/1024).toFixed(1)+' KB';
+  } catch(e){}
+}
+
+function toggleSetting(el) { el.classList.toggle('on'); }
+
+// ========== EXPORT ==========
+function exportCSV() {
+  if (activeSessionIdx<0 || !sessions[activeSessionIdx].data.length) {
+    alert('Aucune donnée à exporter'); return;
+  }
+  const s = sessions[activeSessionIdx];
+  const headers = 'time_ms,speed_kmh,glat_g,glon_g,pitch_deg,roll_deg,yaw_dps,lat,lon,alt_m';
+  const rows = s.data.map(d =>
+    `${d.t},${d.speed.toFixed(2)},${d.glat.toFixed(4)},${d.glon.toFixed(4)},${d.pitch.toFixed(2)},${d.roll.toFixed(2)},${d.yaw.toFixed(2)},${d.lat||''},${d.lon||''},${d.alt||''}`
+  );
+  const blob = new Blob([headers+'\n'+rows.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${s.name}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function clearAll() {
+  if (!confirm('Effacer TOUTES les sessions ?')) return;
+  sessions=[]; activeSessionIdx=-1; compareSessionIdx=-1;
+  localStorage.removeItem('apex_sessions');
+  renderSessions(); updateSettings();
+}
+
+// ========== DEMO MODE (no sensors) ==========
+let demoMode = false;
+function startDemoMode() {
+  demoMode = true;
+  let t = 0;
+  setInterval(() => {
+    t += 0.1;
+    live.speed = 60 + 40*Math.sin(t*0.3) + Math.random()*5;
+    live.glat = 0.8*Math.sin(t*0.7) + (Math.random()-0.5)*0.1;
+    live.glon = 0.4*Math.cos(t*0.5) + (Math.random()-0.5)*0.05;
+    live.pitch = 5*Math.sin(t*0.2) + (Math.random()-0.5)*2;
+    live.roll = 8*Math.sin(t*0.4) + (Math.random()-0.5)*1;
+    live.yaw = 20*Math.cos(t*0.8);
+    live.alt = 150 + 10*Math.sin(t*0.15);
+    live.acc = 2 + Math.floor(Math.random()*3);
+    if (live.speed>live.maxSpd) live.maxSpd=live.speed;
+    if (Math.abs(live.glat)>live.maxLat) live.maxLat=Math.abs(live.glat);
+    if (Math.abs(live.glon)>live.maxLon) live.maxLon=Math.abs(live.glon);
+
+    // Simulated GPS circle
+    const lat = 48.8566 + 0.001*Math.sin(t*0.05);
+    const lon = 2.3522 + 0.002*Math.cos(t*0.05);
+    live.lat=lat; live.lon=lon; live.heading=((t*20)%360);
+    if (map) {
+      marker.setLatLng([lat,lon]);
+      map.panTo([lat,lon],{animate:false});
+      if (isRecording) { gpsPathCoords.push([lat,lon]); gpsPolyline.setLatLngs(gpsPathCoords); }
+      if (isRecording && currentSession) currentSession.gps.push({lat,lon,t:Date.now()});
+    }
+  }, 100);
+}
+
+// ========== INIT ==========
+loadSessions();
+renderSessions();
+initGMeter();
+
+// Check if sensors are likely available
+const hasSensors = 'DeviceMotionEvent' in window || 'DeviceOrientationEvent' in window;
+if (!hasSensors && window.location.protocol !== 'https:') {
+  // Desktop or no sensors: auto-init with demo
+  document.getElementById('permOverlay').querySelector('p').textContent =
+    'Aucun capteur détecté — mode démo activé avec données simulées.';
+  document.getElementById('permOverlay').querySelector('.perm-btn').onclick = () => {
+    document.getElementById('permOverlay').style.display='none';
+    initMap(); initCharts(); startDemoMode();
+    requestAnimationFrame(uiLoop);
+  };
+} else if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission !== 'function') {
+  // Android: no permission prompt needed
+  document.getElementById('permOverlay').style.display='none';
+  initSensors(); initMap(); initCharts(); initGPS();
+  requestAnimationFrame(uiLoop);
+  startDemoMode(); // Also start demo for desktop previewing
+}
+</script>
+</body>
+</html>
