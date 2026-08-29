@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carnet de Route</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root{
+    --ink:#1B2A41;
+    --ink-hover:#2A3F5C;
+    --paper:#F3EEDD;
+    --card:#FBF8F0;
+    --line:#E4D9B8;
+    --line-strong:#D8CBA8;
+    --dash:#C9BC94;
+    --gold:#C98A2C;
+    --gold-hover:#B87A20;
+    --green:#2F6B4F;
+    --blue:#3D4E81;
+    --purple:#7A4FA0;
+    --muted:#5B7083;
+    --muted2:#A8998A;
+    --red:#B23A3A;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:'Inter',system-ui,sans-serif;}
+  .font-serif{font-family:'Fraunces',serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  header.app-header{
+    background:var(--ink); color:var(--paper); padding:16px 20px;
+    position:sticky; top:0; z-index:40;
+  }
+  .header-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .header-inner .logo{color:var(--gold);font-size:22px;}
+  .header-inner h1{font-size:24px;margin:0;letter-spacing:-0.01em;}
+  .header-left{display:flex;align-items:center;gap:10px;}
+  .header-actions{display:flex;gap:6px;flex-shrink:0;}
+  .header-btn{
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);color:var(--paper);
+    font-size:15px;width:34px;height:34px;border-radius:7px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .header-btn:hover{background:rgba(255,255,255,.2);}
+
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(27,42,65,.6);display:flex;
+    align-items:center;justify-content:center;z-index:100;padding:16px;
+  }
+  .modal-box{
+    background:var(--paper);border-radius:12px;padding:20px;max-width:420px;width:100%;
+    max-height:88vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.3);
+  }
+  .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .modal-close{background:none;border:none;font-size:16px;color:var(--muted);cursor:pointer;padding:2px 6px;}
+  .modal-close:hover{color:var(--red);}
+  .modal-help{font-size:12.5px;color:var(--muted);margin:0 0 14px;line-height:1.5;}
+  .gh-status{font-size:12px;color:var(--muted);min-height:16px;margin-bottom:2px;word-break:break-word;}
+  .sync-tabs{display:flex;gap:6px;margin:4px 0 14px;}
+  .sync-tab-btn{
+    flex:1;background:rgba(255,255,255,.5);border:1px solid var(--line-strong);color:var(--muted);
+    font-size:13px;font-weight:600;padding:8px;border-radius:7px;cursor:pointer;font-family:inherit;
+  }
+  .sync-tab-btn.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+
+  .wrap{max-width:960px;margin:0 auto;padding:20px;}
+
+  .trips-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;align-items:center;}
+  .pill{
+    display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;
+    font-size:13px;border:1px solid var(--line-strong);background:rgba(255,255,255,.6);
+    cursor:pointer;color:var(--ink); transition:.15s;
+  }
+  .pill:hover{background:#fff;}
+  .pill.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .pill .del{opacity:0;margin-left:2px;transition:.15s;}
+  .pill:hover .del{opacity:.7;}
+  .pill .del:hover{opacity:1;color:#ff9d9d;}
+  .pill-new{
+    display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;
+    font-size:13px;border:1px dashed var(--gold);color:var(--gold);background:transparent;cursor:pointer;
+  }
+  .pill-new:hover{background:rgba(201,138,44,.1);}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;}
+  .card.max-md{max-width:420px;}
+
+  label.field{display:block;margin-bottom:10px;}
+  .field-label{
+    display:flex;align-items:center;gap:5px;font-size:11px;text-transform:uppercase;
+    letter-spacing:.05em;color:var(--muted);font-weight:600;margin-bottom:4px;
+  }
+  input[type=text], input[type=date], input.field-input, textarea{
+    width:100%;background:rgba(255,255,255,.7);border:1px solid var(--line-strong);
+    border-radius:6px;padding:7px 10px;font-size:14px;color:var(--ink);font-family:inherit;
+  }
+  textarea{resize:none;}
+  input::placeholder, textarea::placeholder{color:var(--muted2);}
+  input:focus, textarea:focus{outline:2px solid var(--gold);outline-offset:0;border-color:transparent;}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  @media(max-width:520px){.grid2{grid-template-columns:1fr;}}
+
+  .btn{border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:600;}
+  .btn-primary{background:var(--gold);color:#fff;padding:9px 14px;font-size:14px;}
+  .btn-primary:hover{background:var(--gold-hover);}
+  .btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-ghost{background:transparent;border:1px solid var(--line-strong);color:var(--muted);padding:9px 14px;font-size:14px;}
+  .btn-ghost:hover{background:rgba(255,255,255,.6);}
+  .btn-icon{
+    width:34px;height:34px;border-radius:6px;background:var(--ink);color:var(--paper);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;
+  }
+  .btn-icon:hover{background:var(--ink-hover);}
+
+  .list-add{display:flex;gap:6px;}
+  .list-add input{flex:1;}
+
+  .link-mini{display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:12px;color:var(--blue);text-decoration:none;}
+  .link-mini:hover{text-decoration:underline;}
+
+  /* Day view */
+  .day-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .nav-btn{
+    width:36px;height:36px;border-radius:999px;border:1px solid var(--line-strong);
+    background:transparent;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;color:var(--ink);font-size:16px;
+  }
+  .nav-btn:hover{background:rgba(255,255,255,.6);}
+  .nav-btn:disabled{opacity:.3;cursor:not-allowed;}
+  .day-title{text-align:center;}
+  .day-title .tag{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.15em;color:var(--gold);text-transform:uppercase;}
+  .day-title .date{font-family:'Fraunces',serif;font-size:24px;text-transform:capitalize;}
+
+  .cases-list{display:flex;flex-direction:column;gap:14px;max-width:640px;margin:0 auto;}
+
+  .slot-card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;}
+  .slot-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;}
+  .slot-head{display:flex;align-items:center;gap:8px;}
+  .slot-icon{width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;flex-shrink:0;}
+  .slot-head h4{font-family:'Fraunces',serif;font-size:17px;margin:0;}
+  .type-tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;color:#fff;display:inline-block;margin-bottom:12px;}
+
+  .case-controls{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+  .ctrl-btn{width:27px;height:27px;border-radius:6px;border:1px solid var(--line-strong);background:rgba(255,255,255,.6);cursor:pointer;font-size:11px;color:var(--ink);}
+  .ctrl-btn:hover{background:#fff;}
+  .ctrl-btn:disabled{opacity:.25;cursor:not-allowed;}
+  .ctrl-btn.del:hover{color:var(--red);border-color:var(--red);background:#fff;}
+
+  /* Empty day / add case */
+  .add-case-zone{max-width:640px;margin:0 auto;}
+  .add-case-btn{
+    width:100%;border:1.5px dashed var(--line-strong);border-radius:9px;padding:16px;
+    background:transparent;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;
+  }
+  .add-case-btn:hover{border-color:var(--gold);color:var(--gold);}
+  .chooser-box{border:1.5px dashed var(--line-strong);border-radius:9px;padding:16px;text-align:center;}
+  .chooser-box .prompt{font-size:13px;color:var(--muted);margin-bottom:12px;}
+  .type-choice{display:flex;flex-direction:column;gap:7px;max-width:300px;margin:0 auto;}
+  .type-btn{
+    display:flex;align-items:center;gap:9px;justify-content:flex-start;padding:10px 14px;
+    border-radius:7px;border:1px solid var(--line-strong);background:rgba(255,255,255,.7);
+    font-size:13.5px;font-weight:600;cursor:pointer;color:var(--ink);text-align:left;
+    border-left:4px solid var(--line-strong);
+  }
+  .type-btn .ic{font-size:16px;}
+  .type-btn:hover{background:#fff;}
+  .type-btn.tb-trajet{border-left-color:var(--blue);}
+  .type-btn.tb-trajet:hover{border-color:var(--blue);}
+  .type-btn.tb-poi{border-left-color:var(--green);}
+  .type-btn.tb-poi:hover{border-color:var(--green);}
+  .type-btn.tb-activite{border-left-color:var(--gold);}
+  .type-btn.tb-activite:hover{border-color:var(--gold);}
+  .type-btn.tb-nuit{border-left-color:var(--purple);}
+  .type-btn.tb-nuit:hover{border-color:var(--purple);}
+  .cancel-choice{margin-top:8px;font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline;}
+
+  /* Tabs */
+  .tabs{
+    display:flex;gap:2px;border-bottom:1px solid var(--line-strong);margin-bottom:18px;
+    position:sticky; top:var(--header-h, 60px); background:var(--paper); z-index:30;
+    padding-top:6px;
+  }
+  .tab-btn{
+    display:flex;align-items:center;gap:6px;padding:9px 14px;font-size:14px;font-weight:500;
+    background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;
+    cursor:pointer;color:var(--muted);
+  }
+  .tab-btn.active{border-color:var(--gold);color:var(--ink);}
+  .tab-btn:hover{color:var(--ink);}
+
+  /* Recap */
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px;}
+  @media(max-width:520px){.stat-grid{grid-template-columns:1fr 1fr;}}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center;}
+  .stat .num{font-family:'IBM Plex Mono',monospace;font-size:22px;}
+  .stat .lab{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);}
+
+  h3.section-title{font-family:'Fraunces',serif;font-size:20px;display:flex;align-items:center;gap:7px;margin:0 0 10px;}
+  .empty-msg{font-size:14px;color:var(--muted);font-style:italic;}
+
+  .leg-row{
+    display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;
+    background:rgba(255,255,255,.5);border:1px solid var(--line);border-radius:6px;
+    padding:8px 12px;font-size:14px;margin-bottom:6px;
+  }
+  .leg-row .d{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);text-transform:uppercase;width:96px;flex-shrink:0;}
+  .leg-row .chip{font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--paper);padding:2px 6px;border-radius:4px;}
+  .leg-row .mapl{margin-left:auto;color:var(--blue);text-decoration:none;}
+
+  .contacts-grid, .poi-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  @media(max-width:600px){.contacts-grid, .poi-grid{grid-template-columns:1fr;}}
+  .contact-card, .poi-card{background:rgba(255,255,255,.5);border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-size:14px;}
+  .contact-card .d, .poi-card .d{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);text-transform:uppercase;}
+  .contact-card .name, .poi-card .name{font-weight:600;}
+  .contact-card .sub, .poi-card .sub{font-size:12px;color:var(--muted);}
+
+  /* Checklist */
+  .check-item{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.5);border:1px solid var(--line);border-radius:6px;padding:8px 12px;margin-bottom:6px;}
+  .check-item .box{cursor:pointer;color:var(--green);background:none;border:none;font-size:17px;}
+  .check-item .txt{flex:1;font-size:14px;}
+  .check-item .txt.done{text-decoration:line-through;color:var(--muted2);}
+
+  .empty-state{text-align:center;padding:70px 0;color:var(--muted);}
+  .empty-state .ic{font-size:38px;color:var(--gold);margin-bottom:10px;}
+
+  .trip-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:16px;}
+  .trip-head h2{font-family:'Fraunces',serif;font-size:30px;margin:0;}
+  .trip-head .sub{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);margin-top:2px;}
+
+  .loading{min-height:100vh;display:flex;align-items:center;justify-content:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:14px;}
+
+  /* Overview calendar */
+  .ov-toolbar{display:flex;justify-content:flex-end;margin-bottom:10px;}
+  .ov-toggle{display:inline-flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden;}
+  .ov-toggle-btn{background:transparent;border:none;padding:6px 12px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;}
+  .ov-toggle-btn.active{background:var(--ink);color:var(--paper);}
+  .ov-toggle-btn:not(.active):hover{background:rgba(255,255,255,.6);}
+
+  .ov-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:4px;}
+  .ov-wd{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:center;font-weight:600;}
+  .ov-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:start;}
+  @media(max-width:700px){
+    .ov-weekdays{display:none;}
+    .ov-grid{grid-template-columns:repeat(2,1fr);}
+  }
+  .ov-cell{
+    background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px;
+    display:flex;flex-direction:column;gap:3px;cursor:pointer;transition:.15s;min-height:56px;
+  }
+  .ov-cell:hover{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold);}
+  .ov-cell.ov-empty{background:transparent;border:none;cursor:default;box-shadow:none;min-height:0;}
+  .ov-cell.expanded{grid-row:span 1;}
+  .ov-date-row{display:flex;align-items:center;justify-content:space-between;gap:4px;}
+  .ov-expand{
+    background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;
+    padding:0 3px;line-height:1;flex-shrink:0;
+  }
+  .ov-expand:hover{color:var(--gold);}
+  .ov-date{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--ink);margin-bottom:1px;}
+  .ov-date .ov-mon{color:var(--gold);text-transform:uppercase;margin-left:3px;}
+  .ov-row{font-size:10.5px;line-height:1.3;padding:4px 6px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ov-cell.expanded .ov-row{white-space:normal;font-size:11.5px;padding:6px 8px;line-height:1.45;}
+  .ov-cell.expanded .ov-row b{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;opacity:.7;margin-bottom:2px;}
+  .ov-row.ov-t-trajet{background:rgba(61,78,129,.12);color:var(--blue);font-family:'IBM Plex Mono',monospace;}
+  .ov-row.ov-t-poi{background:rgba(47,107,79,.12);color:var(--green);}
+  .ov-row.ov-t-activite{background:rgba(201,138,44,.14);color:var(--gold-hover);}
+  .ov-row.ov-t-nuit{background:rgba(122,79,160,.12);color:var(--purple);}
+  .ov-row.ov-empty-row{color:var(--muted2);font-style:italic;border:1px dashed var(--line-strong);background:transparent;}
+  .ov-row:hover{filter:brightness(0.96);outline:1px solid var(--gold);}
+
+  .ov-grid.detail{grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;align-items:start;}
+  .ov-cell.detail{padding:14px;gap:8px;cursor:default;}
+  .ov-cell.detail:hover{border-color:var(--line);box-shadow:none;}
+  .ov-cell.detail .ov-date{font-family:'Fraunces',serif;font-size:19px;font-weight:600;text-transform:capitalize;margin-bottom:2px;}
+  .ov-cell.detail .ov-date .ov-mon{font-family:'IBM Plex Mono',monospace;font-size:12px;}
+  .ov-cell.detail .slot-card{background:#fff;}
+  .ov-cell.detail .grid2{grid-template-columns:1fr;}
+  .ov-cell.detail .cases-list{gap:12px;max-width:none;}
+  .ov-cell.detail .add-case-zone{max-width:none;}
+
+  .slot-card.flash{animation:flashGlow 1.5s ease;}
+  @keyframes flashGlow{
+    0%{box-shadow:0 0 0 3px var(--gold);}
+    100%{box-shadow:0 0 0 0 rgba(201,138,44,0);}
+  }
+</style>
+</head>
+<body>
+
+<div id="loading" class="loading">Chargement du carnet…</div>
+<div id="app" style="display:none;">
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <span class="logo">🧳</span>
+        <h1 class="font-serif">Carnet de Route</h1>
+      </div>
+      <div class="header-actions">
+        <button class="header-btn" id="githubBtn" title="Sauvegarde partagée" aria-label="Sauvegarde partagée">☁️</button>
+        <button class="header-btn" id="exportBtn" title="Exporter tous les voyages (JSON)" aria-label="Exporter en JSON">⬇️</button>
+        <button class="header-btn" id="importBtn" title="Importer une sauvegarde (JSON)" aria-label="Importer un JSON">⬆️</button>
+        <input type="file" id="importFile" accept="application/json,.json" style="display:none;">
+      </div>
+    </div>
+  </header>
+  <div id="githubModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3 class="font-serif" style="margin:0;">☁️ Sauvegarde partagée</h3>
+        <button class="modal-close" id="ghCloseBtn">✕</button>
+      </div>
+      <p class="modal-help">Retrouve tes voyages sur n'importe quel téléphone. Choisis une méthode :</p>
+      <div class="sync-tabs">
+        <button class="sync-tab-btn active" data-sync="jsonbin" id="syncTabJsonbin">🗂️ Simple</button>
+        <button class="sync-tab-btn" data-sync="github" id="syncTabGithub">🐙 GitHub</button>
+      </div>
+
+      <div id="syncJsonbinPanel">
+        <p class="modal-help">Aucun compte GitHub requis. Crée une clé gratuite sur <b>jsonbin.io</b> (inscription en 30 secondes), colle-la ci-dessous — l'espace de sauvegarde est créé automatiquement au premier envoi.</p>
+        <label class="field">
+          <span class="field-label">Clé API (X-Master-Key)</span>
+          <input type="password" id="jbKey" placeholder="Copiée depuis jsonbin.io → API Keys">
+        </label>
+        <label class="field">
+          <span class="field-label">Identifiant de sauvegarde</span>
+          <input type="text" id="jbBinId" placeholder="laisse vide au 1er envoi, il sera généré">
+        </label>
+        <button class="btn btn-ghost" id="jbSaveConfig" style="width:100%;margin-bottom:10px;">Enregistrer les paramètres</button>
+        <div id="jbStatus" class="gh-status"></div>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button class="btn btn-ghost" id="jbPull" style="flex:1;">⬇️ Charger</button>
+          <button class="btn btn-primary" id="jbPush" style="flex:1;">⬆️ Envoyer</button>
+        </div>
+      </div>
+
+      <div id="syncGithubPanel" style="display:none;">
+        <p class="modal-help">Sauvegarde dans un fichier JSON sur un dépôt GitHub. Le jeton reste stocké uniquement sur cet appareil, il n'est envoyé qu'à GitHub.</p>
+        <label class="field">
+          <span class="field-label">Jeton d'accès personnel (PAT)</span>
+          <input type="password" id="ghToken" placeholder="ghp_… (droit 'repo' ou 'Contents: read/write')">
+        </label>
+        <label class="field">
+          <span class="field-label">Dépôt (utilisateur/nom)</span>
+          <input type="text" id="ghRepo" placeholder="ex. monpseudo/mon-depot">
+        </label>
+        <label class="field">
+          <span class="field-label">Chemin du fichier</span>
+          <input type="text" id="ghPath" placeholder="ex. carnet-de-route-data.json">
+        </label>
+        <label class="field">
+          <span class="field-label">Branche</span>
+          <input type="text" id="ghBranch" placeholder="main">
+        </label>
+        <button class="btn btn-ghost" id="ghSaveConfig" style="width:100%;margin-bottom:10px;">Enregistrer les paramètres</button>
+        <div id="ghStatus" class="gh-status"></div>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button class="btn btn-ghost" id="ghPull" style="flex:1;">⬇️ Charger depuis GitHub</button>
+          <button class="btn btn-primary" id="ghPush" style="flex:1;">⬆️ Envoyer vers GitHub</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div id="tripsBar" class="trips-bar"></div>
+    <div id="newTripZone"></div>
+    <div id="tripContent"></div>
+  </div>
+</div>
+
+<script>
+// ---------- Storage (window.storage si dispo, sinon localStorage) ----------
+const STORAGE_KEY = "carnet-de-route:trips";
+const HAS_CLAUDE_STORAGE = (typeof window !== "undefined") && !!window.storage;
+
+async function storageGetRaw(key){
+  if(HAS_CLAUDE_STORAGE){
+    try{ const res = await window.storage.get(key); return res ? res.value : null; }
+    catch(e){ return null; }
+  }
+  try{ return localStorage.getItem(key); } catch(e){ return null; }
+}
+async function storageSetRaw(key, value){
+  if(HAS_CLAUDE_STORAGE){
+    try{ await window.storage.set(key, value); return; }
+    catch(e){ console.error("Erreur de sauvegarde (window.storage)", e); return; }
+  }
+  try{ localStorage.setItem(key, value); }
+  catch(e){ console.error("Erreur de sauvegarde (localStorage)", e); }
+}
+
+async function loadTripsRaw(){
+  try{
+    const raw = await storageGetRaw(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  }catch(e){ return {}; }
+}
+let saveTimer = null;
+function scheduleSave(){
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    storageSetRaw(STORAGE_KEY, JSON.stringify(state.trips));
+  }, 400);
+}
+
+// ---------- Helpers ----------
+const uid = () => Math.random().toString(36).slice(2,10);
+const esc = (s) => (s||"").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+function toISO(d){
+  const dt = new Date(d);
+  const off = dt.getTimezoneOffset();
+  return new Date(dt.getTime() - off*60000).toISOString().slice(0,10);
+}
+function addDays(iso, n){
+  const d = new Date(iso+"T00:00:00");
+  d.setDate(d.getDate()+n);
+  return toISO(d);
+}
+function dayCount(start,end){
+  const a = new Date(start+"T00:00:00");
+  const b = new Date(end+"T00:00:00");
+  return Math.round((b-a)/86400000)+1;
+}
+function fmtDateLong(iso){
+  if(!iso) return "";
+  const d = new Date(iso+"T00:00:00");
+  return d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+}
+function fmtDateShort(iso){
+  if(!iso) return "";
+  const d = new Date(iso+"T00:00:00");
+  return d.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"});
+}
+function mapsSearchUrl(q){ return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q); }
+function mapsDirUrl(o,d){ return "https://www.google.com/maps/dir/?api=1&origin="+encodeURIComponent(o)+"&destination="+encodeURIComponent(d); }
+
+// Content type metadata
+const TYPE_META = {
+  trajet:{label:"Trajet", icon:"🚗", color:"var(--blue)"},
+  poi:{label:"Point d'intérêt", icon:"📍", color:"var(--green)"},
+  activite:{label:"Chose à faire", icon:"✅", color:"var(--gold)"},
+  nuit:{label:"Nuit", icon:"🌙", color:"var(--purple)"},
+};
+
+function newTrajetData(){ return { depart:"", arrivee:"", km:"", duree:"", notes:"" }; }
+function newPoiData(){ return { nom:"", lieu:"", commentaire:"" }; }
+function newActiviteData(){ return { nom:"", heure:"", commentaire:"" }; }
+function newNuitData(){ return { nom:"", adresse:"", telephone:"", contact:"", notes:"" }; }
+function newCase(type){
+  return {
+    id: uid(), type,
+    trajet: type==="trajet" ? newTrajetData() : null,
+    poi: type==="poi" ? newPoiData() : null,
+    activite: type==="activite" ? newActiviteData() : null,
+    nuit: type==="nuit" ? newNuitData() : null,
+  };
+}
+
+function buildDays(start,end,previous){
+  previous = previous || [];
+  const n = dayCount(start,end);
+  if(n<=0) return [];
+  const out = [];
+  for(let i=0;i<n;i++){
+    const date = addDays(start,i);
+    const prev = previous.find(d=>d.date===date);
+    out.push(prev || { date, cases:[] });
+  }
+  return out;
+}
+
+// ---------- Migration (anciens formats -> nouveau format "cases") ----------
+function migrateOldSlot(old, isNight){
+  // ancien format v1 (lieu/activites/poi[]/trajet/notes/hebergement) ou v2 (type/trajet/poi/nuit)
+  if(!old) return null;
+  if(old.type !== undefined){
+    return old.type ? { id:uid(), type:old.type, trajet:old.trajet, poi:old.poi, nuit:old.nuit } : null;
+  }
+  const heb = old.hebergement;
+  const hasHeb = isNight && heb && (heb.nom||heb.adresse||heb.telephone||heb.contact);
+  const trj = old.trajet;
+  const hasTrajet = trj && (trj.depart||trj.arrivee||trj.km||trj.duree);
+  const hasPoiInfo = old.lieu || (old.activites&&old.activites.length) || (old.poi&&old.poi.length);
+  if(hasHeb){
+    return { id:uid(), type:"nuit", trajet:null, poi:null, nuit:{ nom:heb.nom||"", adresse:heb.adresse||"", telephone:heb.telephone||"", contact:heb.contact||"", notes:old.notes||"" } };
+  }
+  if(hasPoiInfo){
+    const bits = [];
+    if(old.activites&&old.activites.length) bits.push("À faire : "+old.activites.join(", "));
+    if(old.poi&&old.poi.length) bits.push("Points d'intérêt : "+old.poi.join(", "));
+    if(old.notes) bits.push(old.notes);
+    return { id:uid(), type:"poi", trajet:null, poi:{ nom:old.lieu||"", lieu:"", commentaire:bits.join(" — ") }, nuit:null };
+  }
+  if(hasTrajet){
+    return { id:uid(), type:"trajet", trajet:{ depart:trj.depart||"", arrivee:trj.arrivee||"", km:trj.km||"", duree:trj.duree||"", notes:old.notes||"" }, poi:null, nuit:null };
+  }
+  return null;
+}
+function migrateDay(day){
+  if(day.cases) return day; // déjà au format v3
+  const cases = [];
+  if(day.creneaux){
+    ["matin","apresmidi","nuit"].forEach(k=>{
+      const c = migrateOldSlot(day.creneaux[k], k==="nuit");
+      if(c) cases.push(c);
+    });
+  }
+  return { date: day.date, cases };
+}
+function migrateTrips(trips){
+  Object.values(trips).forEach(trip=>{
+    trip.jours = (trip.jours||[]).map(migrateDay);
+    if(!trip.checklist) trip.checklist = [];
+    
+  });
+  return trips;
+}
+async function loadTrips(){ return migrateTrips(await loadTripsRaw()); }
+
+// ---------- State ----------
+let state = {
+  trips:{},
+  activeTripId:null,
+  activeDayIndex:0,
+  activeTab:"apercu",
+  showNewTrip:false,
+  ovMode:"compact",
+  expandedDays:{},
+  focusCase:null,
+};
+
+function activeTrip(){ return state.activeTripId ? state.trips[state.activeTripId] : null; }
+function commit(){ scheduleSave(); }
+
+// ---------- Sticky header height ----------
+function updateHeaderHeightVar(){
+  const h = document.querySelector(".app-header");
+  if(h) document.documentElement.style.setProperty("--header-h", h.offsetHeight + "px");
+}
+window.addEventListener("resize", updateHeaderHeightVar);
+window.addEventListener("load", updateHeaderHeightVar);
+
+// ---------- Sauvegarde JSON (export / import) ----------
+function pad2(n){ return String(n).padStart(2,"0"); }
+function exportTrips(){
+  const data = JSON.stringify(state.trips, null, 2);
+  const blob = new Blob([data], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const now = new Date();
+  const stamp = `${now.getFullYear()}${pad2(now.getMonth()+1)}${pad2(now.getDate())}-${pad2(now.getHours())}${pad2(now.getMinutes())}`;
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `carnet-de-route-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+function importTripsFromFile(file){
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    let parsed;
+    try{
+      parsed = JSON.parse(e.target.result);
+    }catch(err){
+      alert("Fichier illisible : ce n'est pas un JSON valide.");
+      return;
+    }
+    if(typeof parsed !== "object" || parsed===null || Array.isArray(parsed)){
+      alert("Format inattendu : ce fichier ne ressemble pas à une sauvegarde du Carnet de Route.");
+      return;
+    }
+    const migrated = migrateTrips(parsed);
+    const count = Object.keys(migrated).length;
+    if(count===0){ alert("Aucun voyage trouvé dans ce fichier."); return; }
+    const ok = confirm(`Importer ${count} voyage(s) ? Les voyages ayant le même identifiant que ceux déjà présents seront remplacés.`);
+    if(!ok) return;
+    Object.assign(state.trips, migrated);
+    if(!state.activeTripId || !state.trips[state.activeTripId]){
+      const ids = Object.keys(state.trips);
+      state.activeTripId = ids.length ? ids.sort((a,b)=>state.trips[a].dateDebut.localeCompare(state.trips[b].dateDebut))[0] : null;
+    }
+    state.expandedDays = {};
+    commit();
+    renderAll();
+    alert(`${count} voyage(s) importé(s) avec succès.`);
+  };
+  reader.onerror = ()=> alert("Impossible de lire ce fichier.");
+  reader.readAsText(file);
+}
+function bindBackupButtons(){
+  document.getElementById("exportBtn").addEventListener("click", exportTrips);
+  const fileInput = document.getElementById("importFile");
+  document.getElementById("importBtn").addEventListener("click", ()=> fileInput.click());
+  fileInput.addEventListener("change", (e)=>{
+    const file = e.target.files[0];
+    if(file) importTripsFromFile(file);
+    e.target.value = "";
+  });
+}
+
+// ---------- Synchronisation GitHub ----------
+const GH_CONFIG_KEY = "carnet-de-route:github-config";
+let githubConfig = { token:"", repo:"", path:"carnet-de-route-data.json", branch:"main" };
+
+async function loadGithubConfig(){
+  try{
+    const raw = await storageGetRaw(GH_CONFIG_KEY);
+    if(raw) githubConfig = { ...githubConfig, ...JSON.parse(raw) };
+  }catch(e){ /* config absente ou invalide, on garde les valeurs par défaut */ }
+}
+function saveGithubConfigToStorage(){
+  storageSetRaw(GH_CONFIG_KEY, JSON.stringify(githubConfig));
+}
+
+function utf8ToBase64(str){ return btoa(unescape(encodeURIComponent(str))); }
+function base64ToUtf8(b64){ return decodeURIComponent(escape(atob(b64.replace(/\s/g,"")))); }
+function ghEncodePath(path){ return path.split("/").filter(Boolean).map(encodeURIComponent).join("/"); }
+function nowTimeLabel(){ const d = new Date(); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
+
+async function githubGetFile(){
+  const url = `https://api.github.com/repos/${githubConfig.repo}/contents/${ghEncodePath(githubConfig.path)}?ref=${encodeURIComponent(githubConfig.branch||"main")}`;
+  const res = await fetch(url, {
+    headers: {
+      "Authorization": `token ${githubConfig.token}`,
+      "Accept": "application/vnd.github+json"
+    }
+  });
+  if(res.status===404) return null;
+  if(!res.ok) throw new Error(`GitHub a répondu ${res.status} — vérifie le jeton, le dépôt et le chemin.`);
+  return res.json();
+}
+
+async function githubSaveFile(jsonString){
+  let sha;
+  const existing = await githubGetFile();
+  if(existing) sha = existing.sha;
+  const url = `https://api.github.com/repos/${githubConfig.repo}/contents/${ghEncodePath(githubConfig.path)}`;
+  const body = {
+    message: `Sauvegarde Carnet de Route – ${new Date().toISOString()}`,
+    content: utf8ToBase64(jsonString),
+    branch: githubConfig.branch || "main",
+  };
+  if(sha) body.sha = sha;
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Authorization": `token ${githubConfig.token}`,
+      "Accept": "application/vnd.github+json",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+  if(!res.ok){
+    const errBody = await res.json().catch(()=>({}));
+    throw new Error(errBody.message || `Échec de l'envoi (${res.status}).`);
+  }
+  return res.json();
+}
+
+function setGhStatus(msg){
+  const el = document.getElementById("ghStatus");
+  if(el) el.textContent = msg;
+}
+function syncGithubConfigFromForm(){
+  githubConfig.token = document.getElementById("ghToken").value.trim();
+  githubConfig.repo = document.getElementById("ghRepo").value.trim().replace(/^\/|\/$/g,"");
+  githubConfig.path = document.getElementById("ghPath").value.trim() || "carnet-de-route-data.json";
+  githubConfig.branch = document.getElementById("ghBranch").value.trim() || "main";
+  saveGithubConfigToStorage();
+}
+function fillGithubForm(){
+  document.getElementById("ghToken").value = githubConfig.token || "";
+  document.getElementById("ghRepo").value = githubConfig.repo || "";
+  document.getElementById("ghPath").value = githubConfig.path || "carnet-de-route-data.json";
+  document.getElementById("ghBranch").value = githubConfig.branch || "main";
+}
+function configIsIncomplete(){
+  return !githubConfig.token || !githubConfig.repo || !githubConfig.path;
+}
+
+async function handlePushToGithub(){
+  syncGithubConfigFromForm();
+  if(configIsIncomplete()){ setGhStatus("⚠️ Renseigne le jeton, le dépôt et le chemin du fichier."); return; }
+  setGhStatus("⏳ Envoi en cours…");
+  try{
+    await githubSaveFile(JSON.stringify(state.trips, null, 2));
+    setGhStatus(`✅ Envoyé sur GitHub à ${nowTimeLabel()}`);
+  }catch(e){
+    setGhStatus(`❌ ${e.message}`);
+  }
+}
+async function handlePullFromGithub(){
+  syncGithubConfigFromForm();
+  if(configIsIncomplete()){ setGhStatus("⚠️ Renseigne le jeton, le dépôt et le chemin du fichier."); return; }
+  const ok = confirm("Charger depuis GitHub va remplacer tes voyages sur cet appareil par la version distante. Continuer ?");
+  if(!ok) return;
+  setGhStatus("⏳ Chargement…");
+  try{
+    const file = await githubGetFile();
+    if(!file) throw new Error("Aucun fichier trouvé à ce chemin sur GitHub. Envoie d'abord une sauvegarde.");
+    const parsed = JSON.parse(base64ToUtf8(file.content));
+    if(typeof parsed !== "object" || parsed===null || Array.isArray(parsed)) throw new Error("Le fichier distant n'a pas le format attendu.");
+    state.trips = migrateTrips(parsed);
+    const ids = Object.keys(state.trips);
+    state.activeTripId = ids.length ? ids.sort((a,b)=>state.trips[a].dateDebut.localeCompare(state.trips[b].dateDebut))[0] : null;
+    state.expandedDays = {};
+    commit();
+    renderAll();
+    setGhStatus(`✅ Chargé depuis GitHub à ${nowTimeLabel()}`);
+  }catch(e){
+    setGhStatus(`❌ ${e.message}`);
+  }
+}
+
+// ---------- Sauvegarde simple (jsonbin.io) ----------
+const JB_CONFIG_KEY = "carnet-de-route:jsonbin-config";
+let jsonbinConfig = { apiKey:"", binId:"" };
+
+async function loadJsonbinConfig(){
+  try{
+    const raw = await storageGetRaw(JB_CONFIG_KEY);
+    if(raw) jsonbinConfig = { ...jsonbinConfig, ...JSON.parse(raw) };
+  }catch(e){}
+}
+function saveJsonbinConfigToStorage(){
+  storageSetRaw(JB_CONFIG_KEY, JSON.stringify(jsonbinConfig));
+}
+function setJbStatus(msg){
+  const el = document.getElementById("jbStatus");
+  if(el) el.textContent = msg;
+}
+function syncJsonbinConfigFromForm(){
+  jsonbinConfig.apiKey = document.getElementById("jbKey").value.trim();
+  jsonbinConfig.binId = document.getElementById("jbBinId").value.trim();
+  saveJsonbinConfigToStorage();
+}
+function fillJsonbinForm(){
+  document.getElementById("jbKey").value = jsonbinConfig.apiKey || "";
+  document.getElementById("jbBinId").value = jsonbinConfig.binId || "";
+}
+
+async function handlePushToJsonbin(){
+  syncJsonbinConfigFromForm();
+  if(!jsonbinConfig.apiKey){ setJbStatus("⚠️ Colle d'abord ta clé API jsonbin.io."); return; }
+  setJbStatus("⏳ Envoi en cours…");
+  try{
+    const payload = JSON.stringify(state.trips);
+    if(jsonbinConfig.binId){
+      const res = await fetch(`https://api.jsonbin.io/v3/b/${jsonbinConfig.binId}`, {
+        method:"PUT",
+        headers:{ "Content-Type":"application/json", "X-Master-Key": jsonbinConfig.apiKey },
+        body: payload
+      });
+      if(!res.ok){
+        if(res.status===404) throw new Error("Identifiant introuvable — laisse le champ vide pour en créer un nouveau.");
+        throw new Error(`Échec de l'envoi (${res.status}).`);
+      }
+      setJbStatus(`✅ Envoyé à ${nowTimeLabel()}`);
+    } else {
+      const res = await fetch("https://api.jsonbin.io/v3/b", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json", "X-Master-Key": jsonbinConfig.apiKey, "X-Bin-Name":"carnet-de-route" },
+        body: payload
+      });
+      if(!res.ok) throw new Error(`Échec de la création (${res.status}) — vérifie ta clé API.`);
+      const data = await res.json();
+      jsonbinConfig.binId = data.metadata.id;
+      saveJsonbinConfigToStorage();
+      document.getElementById("jbBinId").value = jsonbinConfig.binId;
+      setJbStatus(`✅ Sauvegarde créée ! Identifiant à recopier sur tes autres appareils : ${jsonbinConfig.binId}`);
+    }
+  }catch(e){
+    setJbStatus(`❌ ${e.message}`);
+  }
+}
+async function handlePullFromJsonbin(){
+  syncJsonbinConfigFromForm();
+  if(!jsonbinConfig.apiKey || !jsonbinConfig.binId){ setJbStatus("⚠️ Renseigne la clé API et l'identifiant de sauvegarde."); return; }
+  const ok = confirm("Charger va remplacer tes voyages sur cet appareil par la version sauvegardée. Continuer ?");
+  if(!ok) return;
+  setJbStatus("⏳ Chargement…");
+  try{
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${jsonbinConfig.binId}/latest`, {
+      headers:{ "X-Master-Key": jsonbinConfig.apiKey }
+    });
+    if(!res.ok) throw new Error(res.status===404 ? "Identifiant introuvable." : `Erreur (${res.status}) — vérifie ta clé API.`);
+    const data = await res.json();
+    const parsed = data.record;
+    if(typeof parsed !== "object" || parsed===null || Array.isArray(parsed)) throw new Error("Format inattendu.");
+    state.trips = migrateTrips(parsed);
+    const ids = Object.keys(state.trips);
+    state.activeTripId = ids.length ? ids.sort((a,b)=>state.trips[a].dateDebut.localeCompare(state.trips[b].dateDebut))[0] : null;
+    state.expandedDays = {};
+    commit();
+    renderAll();
+    setJbStatus(`✅ Chargé à ${nowTimeLabel()}`);
+  }catch(e){
+    setJbStatus(`❌ ${e.message}`);
+  }
+}
+
+function openGithubModal(){
+  fillGithubForm();
+  fillJsonbinForm();
+  setGhStatus("");
+  setJbStatus("");
+  document.getElementById("githubModal").style.display = "flex";
+}
+function closeGithubModal(){
+  document.getElementById("githubModal").style.display = "none";
+}
+function switchSyncTab(which){
+  const isJb = which==="jsonbin";
+  document.getElementById("syncTabJsonbin").classList.toggle("active", isJb);
+  document.getElementById("syncTabGithub").classList.toggle("active", !isJb);
+  document.getElementById("syncJsonbinPanel").style.display = isJb ? "block" : "none";
+  document.getElementById("syncGithubPanel").style.display = isJb ? "none" : "block";
+}
+function bindGithubUI(){
+  document.getElementById("githubBtn").addEventListener("click", openGithubModal);
+  document.getElementById("ghCloseBtn").addEventListener("click", closeGithubModal);
+  document.getElementById("githubModal").addEventListener("click", (e)=>{
+    if(e.target.id==="githubModal") closeGithubModal();
+  });
+  document.getElementById("syncTabJsonbin").addEventListener("click", ()=>switchSyncTab("jsonbin"));
+  document.getElementById("syncTabGithub").addEventListener("click", ()=>switchSyncTab("github"));
+
+  document.getElementById("jbSaveConfig").addEventListener("click", ()=>{
+    syncJsonbinConfigFromForm();
+    setJbStatus("Paramètres enregistrés sur cet appareil.");
+  });
+  document.getElementById("jbPull").addEventListener("click", handlePullFromJsonbin);
+  document.getElementById("jbPush").addEventListener("click", handlePushToJsonbin);
+
+  document.getElementById("ghSaveConfig").addEventListener("click", ()=>{
+    syncGithubConfigFromForm();
+    setGhStatus("Paramètres enregistrés sur cet appareil.");
+  });
+  document.getElementById("ghPull").addEventListener("click", handlePullFromGithub);
+  document.getElementById("ghPush").addEventListener("click", handlePushToGithub);
+}
+
+// ---------- Init ----------
+(async function init(){
+  state.trips = await loadTrips();
+  await loadGithubConfig();
+  await loadJsonbinConfig();
+  const ids = Object.keys(state.trips);
+  if(ids.length) state.activeTripId = ids.sort((a,b)=>state.trips[a].dateDebut.localeCompare(state.trips[b].dateDebut))[0];
+  document.getElementById("loading").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  renderAll();
+  bindBackupButtons();
+  bindGithubUI();
+  updateHeaderHeightVar();
+  setTimeout(updateHeaderHeightVar, 300);
+})();
+
+// ---------- Render: top-level ----------
+function renderAll(){
+  renderTripsBar();
+  renderNewTripZone();
+  renderTripContent();
+}
+
+function renderTripsBar(){
+  const bar = document.getElementById("tripsBar");
+  const trips = Object.values(state.trips).sort((a,b)=>a.dateDebut.localeCompare(b.dateDebut));
+  let html = "";
+  trips.forEach(t=>{
+    const active = t.id===state.activeTripId;
+    html += `<button class="pill ${active?'active':''}" data-select-trip="${t.id}">
+      ✈️ ${esc(t.nom)}
+      <span class="del" data-delete-trip="${t.id}">✕</span>
+    </button>`;
+  });
+  html += `<button class="pill-new" id="btnNewTrip">+ Nouveau voyage</button>`;
+  bar.innerHTML = html;
+
+  bar.querySelectorAll("[data-select-trip]").forEach(btn=>{
+    btn.addEventListener("click",(e)=>{
+      if(e.target.closest("[data-delete-trip]")) return;
+      state.activeTripId = btn.getAttribute("data-select-trip");
+      state.activeDayIndex = 0;
+      state.activeTab = "apercu";
+      state.expandedDays = {};
+      renderAll();
+    });
+  });
+  bar.querySelectorAll("[data-delete-trip]").forEach(el=>{
+    el.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const id = el.getAttribute("data-delete-trip");
+      const name = state.trips[id].nom;
+      if(confirm(`Supprimer le voyage « ${name} » ?`)){
+        delete state.trips[id];
+        if(state.activeTripId===id){
+          const rest = Object.keys(state.trips);
+          state.activeTripId = rest[0] || null;
+        }
+        commit();
+        renderAll();
+      }
+    });
+  });
+  document.getElementById("btnNewTrip").addEventListener("click",()=>{
+    state.showNewTrip = !state.showNewTrip;
+    renderNewTripZone();
+  });
+}
+
+function renderNewTripZone(){
+  const zone = document.getElementById("newTripZone");
+  if(!state.showNewTrip){ zone.innerHTML=""; return; }
+  zone.innerHTML = `
+    <div class="card max-md" style="margin-bottom:24px;">
+      <h3 class="font-serif" style="font-size:20px;margin:0 0 12px;">Nouveau voyage</h3>
+      <label class="field">
+        <span class="field-label">✈️ Nom du voyage</span>
+        <input type="text" id="ntNom" placeholder="ex. Road trip en Écosse">
+      </label>
+      <div class="grid2">
+        <label class="field"><span class="field-label">📅 Départ</span><input type="date" id="ntDebut"></label>
+        <label class="field"><span class="field-label">📅 Retour</span><input type="date" id="ntFin"></label>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <button class="btn btn-primary" id="ntCreate" style="flex:1;">Créer le voyage</button>
+        <button class="btn btn-ghost" id="ntCancel">Annuler</button>
+      </div>
+    </div>
+  `;
+  document.getElementById("ntCancel").addEventListener("click",()=>{
+    state.showNewTrip = false;
+    renderNewTripZone();
+  });
+  document.getElementById("ntCreate").addEventListener("click",()=>{
+    const nom = document.getElementById("ntNom").value.trim();
+    const dateDebut = document.getElementById("ntDebut").value;
+    const dateFin = document.getElementById("ntFin").value;
+    if(!nom || !dateDebut || !dateFin || dateFin < dateDebut){
+      alert("Merci de renseigner un nom et des dates valides (retour ≥ départ).");
+      return;
+    }
+    const id = uid();
+    state.trips[id] = { id, nom, dateDebut, dateFin, jours: buildDays(dateDebut, dateFin), checklist: [] };
+    state.activeTripId = id;
+    state.activeDayIndex = 0;
+    state.activeTab = "apercu";
+    state.showNewTrip = false;
+    commit();
+    renderAll();
+  });
+}
+
+// ---------- Render: trip content ----------
+function renderTripContent(){
+  const el = document.getElementById("tripContent");
+  const trip = activeTrip();
+  if(!trip){
+    el.innerHTML = state.showNewTrip ? "" : `
+      <div class="empty-state">
+        <div class="ic">🧭</div>
+        <p>Créez votre premier voyage pour commencer à planifier.</p>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="trip-head">
+      <div>
+        <h2 class="font-serif">${esc(trip.nom)}</h2>
+        <div class="sub">${fmtDateShort(trip.dateDebut)} → ${fmtDateShort(trip.dateFin)} · ${trip.jours.length} jours</div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn ${state.activeTab==='apercu'?'active':''}" data-tab="apercu">🗓️ Vue d'ensemble</button>
+      <button class="tab-btn ${state.activeTab==='recap'?'active':''}" data-tab="recap">📍 Récapitulatif</button>
+      <button class="tab-btn ${state.activeTab==='checklist'?'active':''}" data-tab="checklist">☑️ Checklist</button>
+    </div>
+    <div id="tabContent"></div>
+  `;
+
+  el.querySelectorAll("[data-tab]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      state.activeTab = btn.getAttribute("data-tab");
+      renderTripContent();
+    });
+  });
+
+  const tabContent = document.getElementById("tabContent");
+  if(state.activeTab==="apercu") renderApercu(tabContent, trip);
+  else if(state.activeTab==="recap") renderRecap(tabContent, trip);
+  else if(state.activeTab==="checklist") renderChecklist(tabContent, trip);
+}
+
+// ---------- Add-case zone (réutilisée dans la vue d'ensemble détaillée) ----------
+function renderAddCaseZone(zone, day, onChanged){
+  function showButton(){
+    zone.innerHTML = `<button class="add-case-btn" id="addCaseBtn">+ Ajouter une case</button>`;
+    zone.querySelector("#addCaseBtn").addEventListener("click", showChooser);
+  }
+  function showChooser(){
+    zone.innerHTML = `
+      <div class="chooser-box">
+        <div class="prompt">Que veux-tu ajouter ?</div>
+        <div class="type-choice">
+          <button class="type-btn tb-trajet" data-choose="trajet"><span class="ic">🚗</span> Un trajet</button>
+          <button class="type-btn tb-poi" data-choose="poi"><span class="ic">📍</span> Un point d'intérêt</button>
+          <button class="type-btn tb-activite" data-choose="activite"><span class="ic">✅</span> Une chose à faire</button>
+          <button class="type-btn tb-nuit" data-choose="nuit"><span class="ic">🌙</span> Une nuit (hébergement)</button>
+        </div>
+        <button class="cancel-choice" id="cancelChoice">Annuler</button>
+      </div>
+    `;
+    zone.querySelectorAll("[data-choose]").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        day.cases.push(newCase(btn.getAttribute("data-choose")));
+        commit();
+        onChanged();
+      });
+    });
+    zone.querySelector("#cancelChoice").addEventListener("click", showButton);
+  }
+  showButton();
+}
+
+// ---------- Case card ----------
+function buildCaseCard(day, index, onChanged){
+  const c = day.cases[index];
+  const tm = TYPE_META[c.type];
+  const wrap = document.createElement("div");
+  wrap.className = "slot-card";
+  wrap.setAttribute("data-case-id", c.id);
+
+  const controls = `
+    <div class="case-controls">
+      <button class="ctrl-btn" data-act="up" ${index===0?'disabled':''} title="Monter">▲</button>
+      <button class="ctrl-btn" data-act="down" ${index===day.cases.length-1?'disabled':''} title="Descendre">▼</button>
+      <button class="ctrl-btn del" data-act="del" title="Supprimer">🗑</button>
+    </div>
+  `;
+  const headerHtml = `
+    <div class="slot-card-top">
+      <div class="slot-head">
+        <div class="slot-icon" style="background:${tm.color}">${tm.icon}</div>
+        <h4 class="font-serif">Étape ${index+1}</h4>
+      </div>
+      ${controls}
+    </div>
+    <span class="type-tag" style="background:${tm.color}">${tm.icon} ${tm.label}</span>
+  `;
+
+  if(c.type==="trajet"){
+    const t = c.trajet;
+    wrap.innerHTML = headerHtml + `
+      <div class="grid2">
+        <label class="field"><span class="field-label">Départ</span><input type="text" class="f-depart" value="${esc(t.depart)}" placeholder="Lieu de départ"></label>
+        <label class="field"><span class="field-label">Arrivée</span><input type="text" class="f-arrivee" value="${esc(t.arrivee)}" placeholder="Lieu d'arrivée"></label>
+        <label class="field"><span class="field-label">Distance (km)</span><input type="text" class="f-km mono" value="${esc(t.km)}" placeholder="ex. 42"></label>
+        <label class="field"><span class="field-label">Durée</span><input type="text" class="f-duree mono" value="${esc(t.duree)}" placeholder="ex. 1h20"></label>
+      </div>
+      <div class="trajet-link"></div>
+      <label class="field" style="margin-top:8px;">
+        <span class="field-label">✏️ Notes</span>
+        <textarea class="f-notes" rows="2" placeholder="Détails, horaires, réservation…">${esc(t.notes)}</textarea>
+      </label>
+    `;
+    const q = sel=>wrap.querySelector(sel);
+    const renderLink = ()=>{
+      q(".trajet-link").innerHTML = (t.depart && t.arrivee)
+        ? `<a class="link-mini" target="_blank" rel="noreferrer" href="${mapsDirUrl(t.depart,t.arrivee)}">🚗 Itinéraire Google Maps</a>` : "";
+    };
+    renderLink();
+    q(".f-depart").addEventListener("input",e=>{ t.depart=e.target.value; commit(); renderLink(); });
+    q(".f-arrivee").addEventListener("input",e=>{ t.arrivee=e.target.value; commit(); renderLink(); });
+    q(".f-km").addEventListener("input",e=>{ t.km=e.target.value; commit(); });
+    q(".f-duree").addEventListener("input",e=>{ t.duree=e.target.value; commit(); });
+    q(".f-notes").addEventListener("input",e=>{ t.notes=e.target.value; commit(); });
+  }
+  else if(c.type==="poi"){
+    const p = c.poi;
+    wrap.innerHTML = headerHtml + `
+      <label class="field">
+        <span class="field-label">📍 Nom du point d'intérêt</span>
+        <input type="text" class="f-nom" value="${esc(p.nom)}" placeholder="ex. Château d'Édimbourg">
+      </label>
+      <label class="field">
+        <span class="field-label">Lieu / adresse</span>
+        <input type="text" class="f-lieu" value="${esc(p.lieu)}" placeholder="Ville, quartier, adresse…">
+      </label>
+      <div class="lieu-link"></div>
+      <label class="field" style="margin-top:8px;">
+        <span class="field-label">💬 Commentaires</span>
+        <textarea class="f-commentaire" rows="3" placeholder="Notes, horaires d'ouverture, avis, prix…">${esc(p.commentaire)}</textarea>
+      </label>
+    `;
+    const q = sel=>wrap.querySelector(sel);
+    const renderLink = ()=>{
+      const target = p.lieu || p.nom;
+      q(".lieu-link").innerHTML = target ? `<a class="link-mini" target="_blank" rel="noreferrer" href="${mapsSearchUrl(target)}">↗ Voir sur la carte</a>` : "";
+    };
+    renderLink();
+    q(".f-nom").addEventListener("input",e=>{ p.nom=e.target.value; commit(); renderLink(); });
+    q(".f-lieu").addEventListener("input",e=>{ p.lieu=e.target.value; commit(); renderLink(); });
+    q(".f-commentaire").addEventListener("input",e=>{ p.commentaire=e.target.value; commit(); });
+  }
+  else if(c.type==="activite"){
+    const a = c.activite;
+    wrap.innerHTML = headerHtml + `
+      <label class="field">
+        <span class="field-label">✅ Quoi faire</span>
+        <input type="text" class="f-nom" value="${esc(a.nom)}" placeholder="ex. Réserver le restaurant, acheter les billets…">
+      </label>
+      <label class="field">
+        <span class="field-label">🕐 Heure (optionnel)</span>
+        <input type="text" class="f-heure mono" value="${esc(a.heure)}" placeholder="ex. 14h00">
+      </label>
+      <label class="field" style="margin-top:8px;">
+        <span class="field-label">💬 Commentaires</span>
+        <textarea class="f-commentaire" rows="3" placeholder="Notes, détails…">${esc(a.commentaire)}</textarea>
+      </label>
+    `;
+    const q = sel=>wrap.querySelector(sel);
+    q(".f-nom").addEventListener("input",e=>{ a.nom=e.target.value; commit(); });
+    q(".f-heure").addEventListener("input",e=>{ a.heure=e.target.value; commit(); });
+    q(".f-commentaire").addEventListener("input",e=>{ a.commentaire=e.target.value; commit(); });
+  }
+  else if(c.type==="nuit"){
+    const h = c.nuit;
+    wrap.innerHTML = headerHtml + `
+      <div class="grid2">
+        <label class="field"><span class="field-label">Hôtel / logement</span><input type="text" class="f-nom" value="${esc(h.nom)}" placeholder="Nom de l'établissement"></label>
+        <label class="field"><span class="field-label">Adresse</span><input type="text" class="f-adresse" value="${esc(h.adresse)}" placeholder="Adresse complète"></label>
+        <label class="field"><span class="field-label">📞 Téléphone</span><input type="text" class="f-tel mono" value="${esc(h.telephone)}" placeholder="+33 …"></label>
+        <label class="field"><span class="field-label">Contact</span><input type="text" class="f-contact" value="${esc(h.contact)}" placeholder="Nom du contact"></label>
+      </div>
+      <div class="heb-link"></div>
+      <label class="field" style="margin-top:8px;">
+        <span class="field-label">✏️ Notes</span>
+        <textarea class="f-notes" rows="2" placeholder="Numéro de réservation, code d'accès…">${esc(h.notes)}</textarea>
+      </label>
+    `;
+    const q = sel=>wrap.querySelector(sel);
+    const renderLink = ()=>{
+      q(".heb-link").innerHTML = h.adresse ? `<a class="link-mini" target="_blank" rel="noreferrer" href="${mapsSearchUrl(h.adresse)}">↗ Voir le logement sur la carte</a>` : "";
+    };
+    renderLink();
+    q(".f-nom").addEventListener("input",e=>{ h.nom=e.target.value; commit(); });
+    q(".f-adresse").addEventListener("input",e=>{ h.adresse=e.target.value; commit(); renderLink(); });
+    q(".f-tel").addEventListener("input",e=>{ h.telephone=e.target.value; commit(); });
+    q(".f-contact").addEventListener("input",e=>{ h.contact=e.target.value; commit(); });
+    q(".f-notes").addEventListener("input",e=>{ h.notes=e.target.value; commit(); });
+  }
+
+  wrap.querySelector('[data-act="up"]').addEventListener("click",()=>{
+    if(index===0) return;
+    [day.cases[index-1], day.cases[index]] = [day.cases[index], day.cases[index-1]];
+    commit(); onChanged();
+  });
+  wrap.querySelector('[data-act="down"]').addEventListener("click",()=>{
+    if(index===day.cases.length-1) return;
+    [day.cases[index+1], day.cases[index]] = [day.cases[index], day.cases[index+1]];
+    commit(); onChanged();
+  });
+  wrap.querySelector('[data-act="del"]').addEventListener("click",()=>{
+    if(confirm("Supprimer cette case ? Les informations saisies seront perdues.")){
+      day.cases.splice(index,1);
+      commit(); onChanged();
+    }
+  });
+
+  return wrap;
+}
+
+// ---------- Vue d'ensemble (calendrier) ----------
+function weekdayMon0(iso){
+  const d = new Date(iso+"T00:00:00");
+  return (d.getDay()+6)%7;
+}
+const MOIS_ABBR = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+
+function ovSummary(c){
+  if(c.type==="trajet"){
+    const t = c.trajet;
+    if(!t.depart && !t.arrivee) return "🚗 Trajet";
+    return `🚗 ${esc(t.depart)||'?'} → ${esc(t.arrivee)||'?'}`;
+  }
+  if(c.type==="poi") return `📍 ${esc(c.poi.nom)||"Point d'intérêt"}`;
+  if(c.type==="activite") return `✅ ${esc(c.activite.nom)||"Chose à faire"}`;
+  if(c.type==="nuit") return `🌙 ${esc(c.nuit.nom)||"Nuit"}`;
+}
+function ovDetailContent(c){
+  if(c.type==="trajet"){
+    const t = c.trajet;
+    const parts = [`${esc(t.depart)||'?'} → ${esc(t.arrivee)||'?'}`];
+    if(t.km) parts.push(esc(t.km)+" km");
+    if(t.duree) parts.push(esc(t.duree));
+    return `<b>Trajet</b>` + parts.join(" · ") + (t.notes?`<br><span style="opacity:.75">${esc(t.notes)}</span>`:"");
+  }
+  if(c.type==="poi"){
+    const p = c.poi;
+    return `<b>Point d'intérêt</b>${esc(p.nom)||"Sans nom"}` + (p.lieu?`<br>${esc(p.lieu)}`:"") + (p.commentaire?`<br>${esc(p.commentaire)}`:"");
+  }
+  if(c.type==="activite"){
+    const a = c.activite;
+    return `<b>Chose à faire</b>${esc(a.nom)||"Sans nom"}` + (a.heure?` · ${esc(a.heure)}`:"") + (a.commentaire?`<br>${esc(a.commentaire)}`:"");
+  }
+  if(c.type==="nuit"){
+    const h = c.nuit;
+    return `<b>Nuit</b>${esc(h.nom)||"Hébergement"}` + (h.adresse?`<br>${esc(h.adresse)}`:"") + (h.telephone?`<br>📞 ${esc(h.telephone)}`:"");
+  }
+}
+
+function renderApercu(el, trip){
+  const days = trip.jours;
+  if(days.length===0){ el.innerHTML = `<p class="empty-msg">Aucun jour dans ce voyage.</p>`; return; }
+  const mode = state.ovMode || "compact";
+
+  el.innerHTML = `
+    <div class="ov-toolbar">
+      <div class="ov-toggle">
+        <button class="ov-toggle-btn ${mode==='compact'?'active':''}" data-mode="compact">▦ Compact</button>
+        <button class="ov-toggle-btn ${mode==='detail'?'active':''}" data-mode="detail">▤ Détaillé</button>
+      </div>
+    </div>
+    ${mode==="compact" ? `<div class="ov-weekdays">${["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"].map(d=>`<div class="ov-wd">${d}</div>`).join("")}</div>` : ``}
+    <div id="ovGridWrap"></div>
+  `;
+
+  el.querySelectorAll(".ov-toggle-btn").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      state.ovMode = btn.getAttribute("data-mode");
+      renderApercu(el, trip);
+    });
+  });
+
+  const wrap = document.getElementById("ovGridWrap");
+  if(mode==="compact") renderCompactGrid(wrap, trip, el);
+  else renderDetailGrid(wrap, trip);
+}
+
+// ---------- Compact grid (lecture rapide, clic = ouvrir en détaillé) ----------
+function cellRowsCompact(day, expanded){
+  if(day.cases.length===0) return `<div class="ov-row ov-empty-row" data-empty="1">+ Ajouter</div>`;
+  return day.cases.map(c=>{
+    const content = expanded ? ovDetailContent(c) : ovSummary(c);
+    return `<div class="ov-row ov-t-${c.type}" data-case="${c.id}">${content}</div>`;
+  }).join("");
+}
+function renderCompactGrid(wrap, trip, el){
+  wrap.className = "ov-grid";
+  const days = trip.jours;
+  const lead = weekdayMon0(days[0].date);
+  const totalCells = lead + days.length;
+  const trailing = (7 - (totalCells % 7)) % 7;
+
+  let html = "";
+  for(let i=0;i<lead;i++) html += `<div class="ov-cell ov-empty"></div>`;
+  days.forEach((day, idx)=>{
+    const d = new Date(day.date+"T00:00:00");
+    const showMonth = idx===0 || d.getDate()===1;
+    const expanded = !!state.expandedDays[idx];
+    html += `
+      <div class="ov-cell ${expanded?'expanded':''}" data-day="${idx}">
+        <div class="ov-date-row">
+          <div class="ov-date">${d.getDate()}${showMonth?` <span class="ov-mon">${MOIS_ABBR[d.getMonth()]}</span>`:``}</div>
+          ${day.cases.length>0 ? `<button class="ov-expand" data-expand="${idx}" title="${expanded?'Réduire':'Agrandir'}">${expanded?'⌃':'⌄'}</button>` : ``}
+        </div>
+        ${cellRowsCompact(day, expanded)}
+      </div>
+    `;
+  });
+  for(let i=0;i<trailing;i++) html += `<div class="ov-cell ov-empty"></div>`;
+  wrap.innerHTML = html;
+
+  wrap.querySelectorAll(".ov-expand").forEach(btn=>{
+    btn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const idx = btn.getAttribute("data-expand");
+      state.expandedDays[idx] = !state.expandedDays[idx];
+      renderCompactGrid(wrap, trip, el);
+    });
+  });
+
+  wrap.querySelectorAll(".ov-cell[data-day]").forEach(cell=>{
+    cell.addEventListener("click",(e)=>{
+      if(e.target.closest(".ov-expand")) return;
+      const dayIdx = parseInt(cell.getAttribute("data-day"));
+      const rowEl = e.target.closest("[data-case]");
+      const emptyEl = e.target.closest("[data-empty]");
+      state.ovMode = "detail";
+      state.focusCase = rowEl ? rowEl.getAttribute("data-case") : null;
+      state.focusEmptyDay = !!emptyEl;
+      state.scrollToDay = dayIdx;
+      renderApercu(el, trip);
+    });
+  });
+}
+
+// ---------- Detail grid (édition complète, remplace l'ancien onglet Jours) ----------
+function buildDetailCell(day, dayIdx){
+  const cell = document.createElement("div");
+  cell.className = "ov-cell detail";
+  cell.setAttribute("data-day", dayIdx);
+
+  const dateDiv = document.createElement("div");
+  dateDiv.className = "ov-date";
+  dateDiv.innerHTML = `Jour ${dayIdx+1} <span class="ov-mon">·</span> ${fmtDateLong(day.date)}`;
+  cell.appendChild(dateDiv);
+
+  const list = document.createElement("div");
+  list.className = "cases-list";
+  list.style.marginTop = "6px";
+  cell.appendChild(list);
+
+  const addZone = document.createElement("div");
+  addZone.className = "add-case-zone";
+  addZone.style.marginTop = "10px";
+  cell.appendChild(addZone);
+
+  const rerenderThisCell = ()=>{
+    const fresh = buildDetailCell(day, dayIdx);
+    cell.replaceWith(fresh);
+  };
+
+  day.cases.forEach((c, idx)=>{
+    list.appendChild(buildCaseCard(day, idx, rerenderThisCell));
+  });
+  renderAddCaseZone(addZone, day, rerenderThisCell);
+
+  return cell;
+}
+function renderDetailGrid(wrap, trip){
+  wrap.className = "ov-grid detail";
+  wrap.innerHTML = "";
+  trip.jours.forEach((day, idx)=>{
+    wrap.appendChild(buildDetailCell(day, idx));
+  });
+
+  if(state.focusCase){
+    const target = wrap.querySelector(`[data-case-id="${state.focusCase}"]`);
+    state.focusCase = null; state.scrollToDay = null;
+    if(target){
+      setTimeout(()=>{
+        target.scrollIntoView({behavior:"smooth", block:"center"});
+        target.classList.add("flash");
+        setTimeout(()=>target.classList.remove("flash"), 1600);
+      }, 50);
+    }
+  } else if(state.scrollToDay!=null){
+    const cell = wrap.querySelector(`.ov-cell[data-day="${state.scrollToDay}"]`);
+    state.focusEmptyDay = false; state.scrollToDay = null;
+    if(cell) setTimeout(()=>cell.scrollIntoView({behavior:"smooth", block:"start"}), 50);
+  }
+}
+
+// ---------- Recap ----------
+function renderRecap(el, trip){
+  let totalKm = 0;
+  const legs = [];
+  const contacts = [];
+  const pois = [];
+  const activites = [];
+
+  trip.jours.forEach(day=>{
+    day.cases.forEach((c, idx)=>{
+      if(c.type==="trajet"){
+        const km = parseFloat(String(c.trajet.km).replace(",","."));
+        if(!isNaN(km)) totalKm += km;
+        legs.push({date:day.date, etape:idx+1, ...c.trajet});
+      }
+      if(c.type==="nuit" && (c.nuit.nom || c.nuit.telephone)){
+        contacts.push({date:day.date, ...c.nuit});
+      }
+      if(c.type==="poi" && (c.poi.nom || c.poi.commentaire)){
+        pois.push({date:day.date, etape:idx+1, ...c.poi});
+      }
+      if(c.type==="activite" && (c.activite.nom || c.activite.commentaire)){
+        activites.push({date:day.date, etape:idx+1, ...c.activite});
+      }
+    });
+  });
+
+  el.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat"><div class="num mono">${trip.jours.length}</div><div class="lab">Jours</div></div>
+      <div class="stat"><div class="num mono">${totalKm.toFixed(0)}</div><div class="lab">Km au total</div></div>
+      <div class="stat"><div class="num mono">${contacts.length}</div><div class="lab">Logements</div></div>
+    </div>
+
+    <h3 class="section-title">🚗 Trajets</h3>
+    ${legs.length===0 ? `<p class="empty-msg">Aucun trajet renseigné pour l'instant.</p>` :
+      legs.map(leg=>`
+        <div class="leg-row">
+          <span class="d mono">${fmtDateShort(leg.date)}</span>
+          <span>${esc(leg.depart)||"?"} → ${esc(leg.arrivee)||"?"}</span>
+          ${leg.km?`<span class="chip">${esc(leg.km)} km</span>`:""}
+          ${leg.duree?`<span class="chip">${esc(leg.duree)}</span>`:""}
+          ${(leg.depart && leg.arrivee)?`<a class="mapl" target="_blank" rel="noreferrer" href="${mapsDirUrl(leg.depart,leg.arrivee)}">↗</a>`:""}
+        </div>
+      `).join("")
+    }
+
+    <h3 class="section-title" style="margin-top:22px;">📍 Points d'intérêt</h3>
+    ${pois.length===0 ? `<p class="empty-msg">Aucun point d'intérêt renseigné pour l'instant.</p>` :
+      `<div class="poi-grid">` + pois.map(p=>`
+        <div class="poi-card">
+          <div class="d mono">${fmtDateShort(p.date)}</div>
+          <div class="name">${esc(p.nom)||"Sans nom"}</div>
+          ${p.lieu?`<div class="sub">${esc(p.lieu)}</div>`:""}
+          ${p.commentaire?`<div class="sub">💬 ${esc(p.commentaire)}</div>`:""}
+        </div>
+      `).join("") + `</div>`
+    }
+
+    <h3 class="section-title" style="margin-top:22px;">✅ Choses à faire</h3>
+    ${activites.length===0 ? `<p class="empty-msg">Aucune chose à faire renseignée pour l'instant.</p>` :
+      `<div class="poi-grid">` + activites.map(a=>`
+        <div class="poi-card">
+          <div class="d mono">${fmtDateShort(a.date)}${a.heure?` · ${esc(a.heure)}`:""}</div>
+          <div class="name">${esc(a.nom)||"Sans nom"}</div>
+          ${a.commentaire?`<div class="sub">💬 ${esc(a.commentaire)}</div>`:""}
+        </div>
+      `).join("") + `</div>`
+    }
+
+    <h3 class="section-title" style="margin-top:22px;">🏨 Logements &amp; contacts</h3>
+    ${contacts.length===0 ? `<p class="empty-msg">Aucun logement renseigné pour l'instant.</p>` :
+      `<div class="contacts-grid">` + contacts.map(c=>`
+        <div class="contact-card">
+          <div class="d mono">${fmtDateShort(c.date)}</div>
+          <div class="name">${esc(c.nom)||"Logement sans nom"}</div>
+          ${c.adresse?`<div class="sub">${esc(c.adresse)}</div>`:""}
+          ${c.telephone?`<div class="sub">📞 ${esc(c.telephone)}</div>`:""}
+          ${c.contact?`<div class="sub">👤 ${esc(c.contact)}</div>`:""}
+        </div>
+      `).join("") + `</div>`
+    }
+  `;
+}
+
+// ---------- Checklist ----------
+function renderChecklist(el, trip){
+  el.innerHTML = `
+    <div class="list-add" style="max-width:420px;margin-bottom:16px;">
+      <input type="text" id="ckDraft" placeholder="Ajouter à la liste (passeport, adaptateur…)">
+      <button class="btn btn-icon" id="ckAdd">+</button>
+    </div>
+    <ul id="ckList" style="list-style:none;padding:0;margin:0;max-width:420px;"></ul>
+  `;
+  const draft = document.getElementById("ckDraft");
+  const add = ()=>{
+    if(!draft.value.trim()) return;
+    trip.checklist.push({id:uid(), texte:draft.value.trim(), coche:false});
+    draft.value=""; commit(); renderCkList();
+  };
+  document.getElementById("ckAdd").addEventListener("click",add);
+  draft.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); add(); }});
+
+  function renderCkList(){
+    const ul = document.getElementById("ckList");
+    if(trip.checklist.length===0){ ul.innerHTML = `<p class="empty-msg">Rien dans la valise pour l'instant.</p>`; return; }
+    ul.innerHTML = trip.checklist.map(it=>`
+      <li class="check-item">
+        <button class="box" data-id="${it.id}" data-action="toggle">${it.coche?"☑":"☐"}</button>
+        <span class="txt ${it.coche?'done':''}">${esc(it.texte)}</span>
+        <button class="x" data-id="${it.id}" data-action="del">✕</button>
+      </li>
+    `).join("");
+    ul.querySelectorAll('[data-action="toggle"]').forEach(btn=>btn.addEventListener("click",()=>{
+      const it = trip.checklist.find(x=>x.id===btn.dataset.id);
+      it.coche = !it.coche; commit(); renderCkList();
+    }));
+    ul.querySelectorAll('[data-action="del"]').forEach(btn=>btn.addEventListener("click",()=>{
+      trip.checklist = trip.checklist.filter(x=>x.id!==btn.dataset.id); commit(); renderCkList();
+    }));
+  }
+  renderCkList();
+}
+</script>
+</body>
+</html>
